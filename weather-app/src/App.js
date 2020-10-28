@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
-import logo from './logo.svg';
 import './App.css';
 import Metolib from '@fmidev/metolib'
-import  { WeatherReal } from './WeatherReal';
-
 //
 
 function App () {
   const [temperatures, setTemperatures] = useState([]);
   const [times, setTimes] = useState([]);
+  const [input, setInput] = useState("");
   let tempDay = [];
 
   function getData() {
@@ -23,7 +21,7 @@ function App () {
     begin : new Date(2020, 9, 20, 0, 0, 0),
     end : new Date(2020, 9, 21, 0, 0, 0),
     timestep : 60 * 60 * 1000,
-    sites : "Jyväskylä",
+    sites : input,
     callback : function(data, errors) {
       handleData(data, errors);
     }
@@ -45,6 +43,12 @@ function handleData(data, errors) {
   }
 }
 
+function handleInput(event) {
+  event.preventDefault();
+  setInput(event.target.value);
+  console.log(event.target.value);
+}
+
   const handleClick = (event) => {
     event.preventDefault();
     getData();
@@ -54,7 +58,8 @@ function handleData(data, errors) {
     <div className="App">
       <h1>Sää</h1>
       <button onClick={handleClick}>Hae tiedot</button>
-      <div id="city">Jyväskylä</div>
+      <input value={input} onChange={handleInput}/>
+      <div id="city">{input}</div>
       <div id="date">12/10/2020</div>
       <div className="current">
         <header>WEATHER</header>
