@@ -1,0 +1,27 @@
+.App {
+  text-align: center;
+}
+
+#city {
+  font-size: x-large;
+}
+
+.current, .expected {
+  padding: 30px;
+}
+
+.weatherBar {
+  padding: 0px 30px 0px 30px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.temp {
+  padding: 0px 30px 30px 30px;
+}
+
+.t {
+  font-size: 30px;
+}
+
