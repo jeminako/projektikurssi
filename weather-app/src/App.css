@@ -6,8 +6,12 @@
   font-size: x-large;
 }
 
-.current, .expected {
+.weatherData {
   padding: 30px;
+}
+
+h3 {
+  color: red;
 }
 
 .weatherBar {
