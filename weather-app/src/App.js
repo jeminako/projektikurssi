@@ -21,7 +21,7 @@ function App () {
     requestParameter : "temperature",
     begin : new Date(dateParts[2], dateParts[1]-1, dateParts[0], 0, 0, 0),
     end : new Date(dateParts[2], dateParts[1]-1, dateParts[0], 23, 0, 0),
-    timestep : 60 * 60 * 1000,
+    timestep : 60 * 60 * 1000 * 3,
     sites : input.city,
     callback : function(data, errors) {
       handleData(data, errors);
@@ -77,12 +77,23 @@ function App () {
       <div className="weatherData">
         <header>WEATHER</header>
         <div className="weatherBar">
-        {temperatures.map((item, index) => (
-          <div key={index + "div"} className="temp">
-            <header key={index + "time"} className="time">{item[0]}</header>
-            <div key={index + "t"} className="t">{item[1]}</div>
-          </div>
-        ))}
+          {temperatures.map((item, index) => (
+            <div key={index + "div"} className="temp">
+              <header key={index + "time"} className="time">{item[0]}</header>
+              <div key={index + "t"} className="t">{item[1]}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="weatherData">
+        <header>FORECAST</header>
+        <div className="weatherBar">
+          {temperatures.map((item, index) => (
+              <div key={index + "div"} className="temp">
+                <header key={index + "time"} className="time">{item[0]}</header>
+                <div key={index + "t"} className="t">{item[1]}</div>
+              </div>
+            ))}
         </div>
       </div>
     </div>
