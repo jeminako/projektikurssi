@@ -29,3 +29,8 @@ h3 {
   font-size: 30px;
 }
 
+svg {
+  margin: 20px;
+  background: #eeeeee;
+  overflow: visible;
+}
