@@ -7,6 +7,7 @@ function App () {
 
   //Hooks
   const [temperatures, setTemperatures] = useState([]);
+  const [maxTemperatures, setMaxTemperatures] = useState([]);
   const [input, setInput] = useState({city: "", date: ""});
   const [warning, setWarning] = useState("");
   const [windData, setWindData] = useState([]);
@@ -61,13 +62,15 @@ function App () {
     var STORED_QUERY_OBSERVATION = "fmi::observations::weather::multipointcoverage";
     var parser = new Metolib.WfsRequestParser();
     let dateParts = input.date.split('/').map(Number);
+    let pvm = new Date(dateParts[2], dateParts[1]-1, dateParts[0], 0, 0, 0);
+    let uusiEnd = new Date(pvm.getTime() + 604800000);
     parser.getData({
     url : SERVER_URL,
     storedQueryId: STORED_QUERY_OBSERVATION,
     requestParameter : "temperature",
-    begin : new Date(dateParts[2], dateParts[1]-1, dateParts[0], 0, 0, 0),
-    end : new Date(dateParts[2], dateParts[1]-1, dateParts[0], 23, 0, 0),
-    timestep : 60 * 60 * 1000 * 3,
+    begin : pvm,
+    end : uusiEnd,
+    timestep : 60 * 60 * 1000,
     sites : input.city,
     callback : function(data, errors) {
       handleData(data, errors);
@@ -82,12 +85,40 @@ function App () {
     if (errors.length === 0) {
       for (const pair of data.locations[0].data.temperature.timeValuePairs) {
         var timeMs = new Date(pair.time);
-        var timeString = timeMs.toTimeString().substring(0, 5);
-        tempDay.push([timeString, pair.value]);
+        var dateString = timeMs.getDate() + "." + (timeMs.getMonth() + 1) + "." + timeMs.getFullYear();
+        //var timeString = timeMs.toTimeString();
+        tempDay.push([dateString, pair.value]);
       }
       setTemperatures(tempDay);
       setWarning("");
       getWindData();
+
+      let lampotila;
+      let suurin = -1000;
+
+      let tempWeekMax = [];
+      let apuMaximi = [];
+      let suurinPari;
+      var i = 1;
+
+      for (const pari of tempDay) {
+        apuMaximi.push(pari);
+        if (i === 24) {
+          for (const pari2 of apuMaximi) {
+            lampotila = pari2[1];
+            if (suurin < lampotila) suurin = lampotila;
+          }
+          suurinPari = [pari[0], suurin]
+          console.log(suurinPari)
+          tempWeekMax.push(suurinPari);
+          apuMaximi = [];
+          i = 1;
+          suurin = -1000;
+        }
+        i++;
+      }
+      console.log(tempWeekMax);
+      setMaxTemperatures(tempWeekMax);
     } else {
       console.log("Error");
       setTemperatures([]);
@@ -165,7 +196,7 @@ function App () {
       <div className="weatherData">
         <header>WEATHER</header>
         <div className="weatherBar">
-          {temperatures.map((item, index) => (
+          {maxTemperatures.map((item, index) => (
             <div key={index + "div"} className="temp">
               <header key={index + "time"} className="time">{item[0]}</header>
               <div key={index + "t"} className="t">{item[1]}</div>
@@ -182,7 +213,7 @@ function App () {
       <div className="weatherData">
         <header>FORECAST</header>
         <div className="weatherBar">
-          {temperatures.map((item, index) => (
+          {maxTemperatures.map((item, index) => (
               <div key={index + "div"} className="temp">
                 <header key={index + "time"} className="time">{item[0]}</header>
                 <div key={index + "t"} className="t">{item[1]}</div>
