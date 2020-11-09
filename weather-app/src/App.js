@@ -25,7 +25,7 @@ function App () {
 
     //Y-akselin skaalaus
     const yScale = d3.scaleLinear()
-      .domain([0, 10])
+      .domain([0, 20])
       .range([150, 0]);
 
     //X-akseli
@@ -44,8 +44,7 @@ function App () {
     //Viiva
     const windLine = d3.line()
       .x((value, index) => xScale(index))
-      .y(yScale)
-      .curve(d3.curveCardinal);
+      .y(yScale);
     svg
       .selectAll(".line")
       .data([windData])
@@ -86,12 +85,11 @@ function App () {
       for (const pair of data.locations[0].data.temperature.timeValuePairs) {
         var timeMs = new Date(pair.time);
         var dateString = timeMs.getDate() + "." + (timeMs.getMonth() + 1) + "." + timeMs.getFullYear();
-        //var timeString = timeMs.toTimeString();
         tempDay.push([dateString, pair.value]);
       }
       setTemperatures(tempDay);
       setWarning("");
-      getWindData();
+      
 
       let lampotila;
       let suurin = -1000;
@@ -109,7 +107,6 @@ function App () {
             if (suurin < lampotila) suurin = lampotila;
           }
           suurinPari = [pari[0], suurin]
-          console.log(suurinPari)
           tempWeekMax.push(suurinPari);
           apuMaximi = [];
           i = 1;
@@ -117,7 +114,6 @@ function App () {
         }
         i++;
       }
-      console.log(tempWeekMax);
       setMaxTemperatures(tempWeekMax);
     } else {
       console.log("Error");
@@ -133,13 +129,15 @@ function App () {
     var STORED_QUERY_OBSERVATION = "fmi::observations::weather::multipointcoverage";
     var parser = new Metolib.WfsRequestParser();
     let dateParts = input.date.split('/').map(Number);
+    let pvm = new Date(dateParts[2], dateParts[1]-1, dateParts[0], 0, 0, 0);
+    let uusiEnd = new Date(pvm.getTime() + 604800000);
     parser.getData({
     url : SERVER_URL,
     storedQueryId: STORED_QUERY_OBSERVATION,
     requestParameter : "ws_10min",
-    begin : new Date(dateParts[2], dateParts[1]-1, dateParts[0], 0, 0, 0),
-    end : new Date(dateParts[2], dateParts[1]-1, dateParts[0], 23, 0, 0),
-    timestep : 60 * 60 * 1000 * 3,
+    begin : pvm,
+    end : uusiEnd,
+    timestep : 60 * 60 * 1000,
     sites : input.city,
     callback : function(data, errors) {
       handleWindData(data, errors);
@@ -151,15 +149,32 @@ function App () {
   function handleWindData(data, errors) {
     if (errors.length === 0) {
       let windAr = [];
-      let windTimeAr = [];
+      let allTimes = [];
+      let windTimes = [];
+      console.log(data);
       for (const pair of data.locations[0].data.ws_10min.timeValuePairs) {
         var timeMs = new Date(pair.time);
-        var timeString = timeMs.toTimeString().substring(0, 5);
-        windTimeAr.push([timeString]);
-        windAr.push([pair.value]);
+        var dateString = timeMs.getDate() + "." + (timeMs.getMonth() + 1) + ".";
+        allTimes.push(dateString);
+        windAr.push(pair.value);
       }
-      setWindData(windAr);
-      setWindTimeData(windTimeAr);
+      let maxAr = [];
+      let j = 0;
+      let limit = 24;
+      for (let i = 0; i<7; i++) {
+        let max = -1;
+        for (j; j<limit; j++) {
+          if (windAr[j] > max) {
+            max = windAr[j];
+          }
+        }
+        windTimes.push(allTimes[j-1]);
+        maxAr.push(max);
+        limit += 24;
+      }
+      console.log(maxAr);
+      setWindData(maxAr);
+      setWindTimeData(windTimes);
     } else {
       console.log("Error");
       setWindData([]);
@@ -182,6 +197,7 @@ function App () {
   const handleClick = (event) => {
     event.preventDefault();
     getData();
+    getWindData();
   }
 
   return (
