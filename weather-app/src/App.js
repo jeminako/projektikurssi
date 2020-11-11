@@ -42,6 +42,8 @@ function App () {
   //Efekti, jota käytetään tuulen nopeuden grafiikan näyttämiseen
   useEffect(() => {
     const svg = d3.select(svgRef.current);
+    console.log(windData);
+    let maxValue = Math.ceil(Math.max(...windData)) + 2;
 
     //X-akselin skaalaus
     const xScale = d3.scaleLinear()
@@ -50,7 +52,7 @@ function App () {
 
     //Y-akselin skaalaus
     const yScale = d3.scaleLinear()
-      .domain([0, 20])
+      .domain([0, maxValue])
       .range([150, 0]);
 
     //X-akseli
@@ -265,7 +267,7 @@ function App () {
       </div>
       <div className="sources">
         <header>Lähteet:</header>
-        <p>Lähde 1</p>
+        <p>Kaikki sovelluksen data on saatu Ilmatieteen laitoksen toimittamista <a href="https://www.ilmatieteenlaitos.fi/avoin-data">tietoaineistoista.</a> Data on lisensioitu © <a href="https://creativecommons.org/licenses/by/4.0/deed.fi">CC BY 4.0-lisenssillä.</a></p>
       </div>
     </div>
   );
