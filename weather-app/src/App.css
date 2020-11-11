@@ -16,6 +16,15 @@
   height: 50px;
 }
 
+.date {
+  width: 219px;
+  height: 25px;
+  border: 1px solid #ccc;
+  border-radius: 2px;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
 h3 {
   color: red;
 }

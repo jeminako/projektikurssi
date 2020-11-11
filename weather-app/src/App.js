@@ -231,12 +231,10 @@ function App () {
     <div className="App">
       <h1>Sää</h1>
       <Dropdown className="dropDown" options={options} onChange={onSelect} value={inputCity} placeholder="Valitse kaupunki"/>
-      <input name="date" value={inputDate} onChange={handleInputDate} placeholder="pp/kk/vvvv" />
+      <input className="date" value={inputDate} onChange={handleInputDate} placeholder="pp/kk/vvvv" />
       <br/> 
       <button onClick={handleClick}>Hae tiedot</button>
       <h3>{warning}</h3>
-      <div id="city">{input.city}</div>
-      <div id="date">{input.date}</div>
       <div className="weatherData">
         <header>WEATHER</header>
         <div className="weatherBar">
