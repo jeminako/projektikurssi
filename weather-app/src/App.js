@@ -2,17 +2,42 @@ import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import Metolib from '@fmidev/metolib';
 import * as d3 from 'd3';
+import Dropdown from 'react-dropdown';
+import 'react-dropdown/style.css';
 
 function App () {
 
   //Hooks
   const [temperatures, setTemperatures] = useState([]);
   const [maxTemperatures, setMaxTemperatures] = useState([]);
-  const [input, setInput] = useState({city: "", date: ""});
+  const [inputCity, setInputCity] = useState("");
+  const [inputDate, setInputDate] = useState("");
   const [warning, setWarning] = useState("");
   const [windData, setWindData] = useState([]);
   const [windTimeData, setWindTimeData] = useState([]);
   const svgRef = useRef();
+
+  const options = [
+    'Helsinki',
+    'Hämeenlinna',
+    'Joensuu',
+    'Jyväskylä',
+    'Kajaani',
+    'Kokkola',
+    'Kotka',
+    'Kuopio',
+    'Lahti',
+    'Lappeenranta',
+    'Maarianhamina',
+    'Mikkeli',
+    'Oulu',
+    'Pori',
+    'Rovaniemi',
+    'Seinäjoki',
+    'Tampere',
+    'Turku',
+    'Vaasa'
+  ];
 
   //Efekti, jota käytetään tuulen nopeuden grafiikan näyttämiseen
   useEffect(() => {
@@ -60,7 +85,7 @@ function App () {
     var SERVER_URL = "http://opendata.fmi.fi/wfs";
     var STORED_QUERY_OBSERVATION = "fmi::observations::weather::multipointcoverage";
     var parser = new Metolib.WfsRequestParser();
-    let dateParts = input.date.split('/').map(Number);
+    let dateParts = inputDate.split('/').map(Number);
     let pvm = new Date(dateParts[2], dateParts[1]-1, dateParts[0], 0, 0, 0);
     let uusiEnd = new Date(pvm.getTime() + 604800000);
     parser.getData({
@@ -70,7 +95,7 @@ function App () {
     begin : pvm,
     end : uusiEnd,
     timestep : 60 * 60 * 1000,
-    sites : input.city,
+    sites : inputCity,
     callback : function(data, errors) {
       handleData(data, errors);
     }
@@ -128,7 +153,7 @@ function App () {
     var SERVER_URL = "http://opendata.fmi.fi/wfs";
     var STORED_QUERY_OBSERVATION = "fmi::observations::weather::multipointcoverage";
     var parser = new Metolib.WfsRequestParser();
-    let dateParts = input.date.split('/').map(Number);
+    let dateParts = inputDate.split('/').map(Number);
     let pvm = new Date(dateParts[2], dateParts[1]-1, dateParts[0], 0, 0, 0);
     let uusiEnd = new Date(pvm.getTime() + 604800000);
     parser.getData({
@@ -138,7 +163,7 @@ function App () {
     begin : pvm,
     end : uusiEnd,
     timestep : 60 * 60 * 1000,
-    sites : input.city,
+    sites : inputCity,
     callback : function(data, errors) {
       handleWindData(data, errors);
     }
@@ -184,13 +209,10 @@ function App () {
   }
 
   //Funktio input-palkkien tekstinsyötön käsittelyyn
-  function handleInput(event) {
+  function handleInputDate(event) {
     event.preventDefault();
     const value = event.target.value;
-    setInput({
-      ...input,
-      [event.target.name]: value
-    });
+    setInputDate(value);
   }
 
   //Käsitellään hakunapin painallus
@@ -200,12 +222,18 @@ function App () {
     getWindData();
   }
 
+  const onSelect = (event) => {
+    console.log(event.value);
+    setInputCity(event.value);
+  }
+
   return (
     <div className="App">
       <h1>Sää</h1>
+      <Dropdown className="dropDown" options={options} onChange={onSelect} value={inputCity} placeholder="Valitse kaupunki"/>
+      <input name="date" value={inputDate} onChange={handleInputDate} placeholder="pp/kk/vvvv" />
+      <br/> 
       <button onClick={handleClick}>Hae tiedot</button>
-      <input name="city" value={input.city} onChange={handleInput} placeholder="kaupunki" />
-      <input name="date" value={input.date} onChange={handleInput} placeholder="pp/kk/vvvv" />
       <h3>{warning}</h3>
       <div id="city">{input.city}</div>
       <div id="date">{input.date}</div>
@@ -236,6 +264,10 @@ function App () {
               </div>
             ))}
         </div>
+      </div>
+      <div className="sources">
+        <header>Lähteet:</header>
+        <p>Lähde 1</p>
       </div>
     </div>
   );
