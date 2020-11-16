@@ -17,6 +17,8 @@ function App () {
   const [rainData, setRainData] = useState([]);
   const svgRef = useRef();
   const svgRefRain = useRef();
+  const svgRefForecast = useRef();
+  const svgRefRainForecast = useRef();
 
   const options = [
     'Helsinki',
@@ -62,12 +64,14 @@ function App () {
     svg.select(".x-axis")
       .style("transform", "translateY(150px)")
       .call(xAxis);
+
     //Y-akseli
     const yAxis = d3.axisRight(yScale)
       .tickFormat(value => value + " m/s");
     svg.select(".y-axis")
       .style("transform", "translateX(300px)")
       .call(yAxis);
+
     //Viiva
     const windLine = d3.line()
       .x((value, index) => xScale(index))
@@ -82,18 +86,23 @@ function App () {
       .attr("stroke", "blue");
   }, [windData, windAndRainTimeData]);
 
+  //Efekti, jota käytetään sademäärän grafiikan näyttämiseen
   useEffect(() => {
     const svg = d3.select(svgRefRain.current);
     let maxValue = Math.ceil(Math.max(...rainData)) + 0.5;
+
+    //X-akselin skaalaus
     const xScale = d3.scaleBand()
       .domain(rainData.map((value, index) => index))
       .range([0,300])
       .padding(0.5);
 
+    //Y-akselin skaalaus
     const yScale = d3.scaleLinear()
       .domain([0, maxValue])
       .range([150, 0]);
 
+    //X-akseli
     const xAxis = d3.axisBottom(xScale)
       .ticks(rainData.length)
       .tickFormat(index => windAndRainTimeData[index]);
@@ -101,12 +110,14 @@ function App () {
       .style("transform", "translateY(150px)")
       .call(xAxis);
 
+    //Y-akseli
     const yAxis = d3.axisRight(yScale)
       .tickFormat(value => value + " mm");
     svg.select(".y-axis")
       .style("transform", "translateX(300px)")
       .call(yAxis);
 
+    //Palkit
     svg.selectAll(".bar")
       .data(rainData)
       .join("rect")
@@ -120,7 +131,7 @@ function App () {
       .attr("height", value => 150 - yScale(value));
   }, [rainData, windAndRainTimeData]);
 
-  //Haetaan annettujen parametrien mukainen data ilmatieteenlaitoksen latauspalvelusta
+  //Haetaan annettujen parametrien mukainen lämpötiladata ilmatieteenlaitoksen latauspalvelusta
   function getData() {
     var SERVER_URL = "http://opendata.fmi.fi/wfs";
     var STORED_QUERY_OBSERVATION = "fmi::observations::weather::multipointcoverage";
@@ -142,7 +153,7 @@ function App () {
    });
   }
 
-  //Käsitellään ja asetetaan haettu data. Jos virheitä, näytetään varoitusviesti.
+  //Käsitellään ja asetetaan haettu lämpötiladata. Jos virheitä, näytetään varoitusviesti.
   function handleData(data, errors) {
     console.log(data);
     let tempDay = [];
@@ -154,7 +165,7 @@ function App () {
       }
       setWarning("");
       
-
+      //Viikon maksimien etsiminen
       let lampotila;
       let suurin = -1000;
 
@@ -180,6 +191,7 @@ function App () {
       }
       setMaxTemperatures(tempWeekMax);
     } else {
+      //Toiminnot, jos datassa virheitä
       console.log("Error");
       setMaxTemperatures([]);
       setWarning("Tarkista hakuehdot!");
@@ -187,7 +199,7 @@ function App () {
     }
   }
 
-  //Haetaan annettujen parametrien mukainen tuulidata ilmatieteenlaitoksen latauspalvelusta
+  //Haetaan annettujen parametrien mukainen tuuli- ja sadedata ilmatieteenlaitoksen latauspalvelusta
   function getWindAndRainData() {
     var SERVER_URL = "http://opendata.fmi.fi/wfs";
     var STORED_QUERY_OBSERVATION = "fmi::observations::weather::multipointcoverage";
@@ -209,7 +221,7 @@ function App () {
    });
   }
 
-  //Käsitellään ja asetetaan haettu data. Jos virheitä, näytetään varoitusviesti.
+  //Käsitellään ja asetetaan haettu tuuli/sade data. Jos virheitä, näytetään varoitusviesti.
   function handleWindAndRainData(data, errors) {
     console.log(data);
     if (errors.length === 0) {
@@ -225,17 +237,20 @@ function App () {
       for (const pair of data.locations[0].data.r_1h.timeValuePairs) {
         rainAr.push(pair.value);
       }
+
+      //Etsitään viikon maksimit tuulennopeuksille
       let maxAr = [];
       let maxTimes = [];
-      rainAndWindMax(windAr, allTimes, maxAr, maxTimes);
+      windMax(windAr, allTimes, maxAr, maxTimes);
       console.log(maxAr);
       setWindData(maxAr);
       setWindAndRainTimeData(maxTimes);
-      maxAr = [];
-      maxTimes = [];
-      rainAndWindMax(rainAr, allTimes, maxAr, maxTimes);
-      console.log(maxAr);
-      setRainData(maxAr);
+      
+      //Etsitään sademäärät päiville
+      let rainAmount = [];
+      dailyRainAmount(rainAmount, rainAr);
+      console.log(rainAmount);
+      setRainData(rainAmount);
     } else {
       console.log("Error");
       setWindData([]);
@@ -245,7 +260,26 @@ function App () {
     }
   }
 
-  function rainAndWindMax(elementAr, allTimes, maxAr, maxTimes) {
+  //Laskee viikolle päivän sademäärän
+  function dailyRainAmount(rainAmount, rainAr) {
+    let j = 0;
+    let limit = 24;
+    for (let i = 0; i<7; i++) {
+      let amount = 0;
+      for (j; j<limit; j++) {
+        let rain = rainAr[j];
+        if (isNaN(rain)) {
+          rain = 0;
+        }
+        amount += rain;
+      }
+      rainAmount.push(amount);
+      limit += 24;
+    }
+  }
+
+  //Funktio tuulennopeuden viikon maksimien etsimiseen
+  function windMax(elementAr, allTimes, maxAr, maxTimes) {
     let j = 0;
     let limit = 24;
     for (let i = 0; i<7; i++) {
@@ -275,6 +309,7 @@ function App () {
     getWindAndRainData();
   }
 
+  //Asetetaan valittu kaupunki
   const onSelect = (event) => {
     console.log(event.value);
     setInputCity(event.value);
@@ -298,15 +333,21 @@ function App () {
             </div>
           ))}
         </div>
-        <div>
-          <svg ref={svgRef}>
-            <g className="x-axis" />
-            <g className="y-axis" />
-          </svg>
-          <svg ref={svgRefRain}>
-            <g className="x-axis" />
-            <g className="y-axis" />
-        </svg>
+        <div className="visualizations">
+          <div>
+            <svg ref={svgRef}>
+              <g className="x-axis" />
+              <g className="y-axis" />
+            </svg>
+            <p>Tuulennopeuksien maksimit</p>
+          </div>
+          <div>
+            <svg ref={svgRefRain}>
+              <g className="x-axis" />
+              <g className="y-axis" />
+            </svg>
+            <p>Päivittäiset sademäärät</p>
+          </div>
         </div>
       </div>
       <div className="weatherData">
@@ -318,6 +359,22 @@ function App () {
                 <div key={index + "t"} className="t">{item[1]}</div>
               </div>
             ))}
+        </div>
+        <div className="visualizations">
+          <div>
+            <svg ref={svgRefForecast}>
+              <g className="x-axis" />
+              <g className="y-axis" />
+            </svg>
+            <p>Ennustus</p>
+          </div>
+          <div>
+            <svg ref={svgRefRainForecast}>
+              <g className="x-axis" />
+              <g className="y-axis" />
+            </svg>
+            <p>Ennustus</p>
+          </div>
         </div>
       </div>
       <div className="sources">

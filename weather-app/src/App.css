@@ -40,12 +40,17 @@ h3 {
   padding: 0px 30px 30px 30px;
 }
 
+.visualizations {
+  display: flex;
+  justify-content: center;
+}
+
 .t {
   font-size: 30px;
 }
 
 svg {
-  margin: 40px;
+  margin: 30px 40px 10px 30px;
   background: #eeeeee;
   overflow: visible;
 }
