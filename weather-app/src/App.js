@@ -8,14 +8,15 @@ import 'react-dropdown/style.css';
 function App () {
 
   //Hooks
-  const [temperatures, setTemperatures] = useState([]);
   const [maxTemperatures, setMaxTemperatures] = useState([]);
   const [inputCity, setInputCity] = useState("");
   const [inputDate, setInputDate] = useState("");
   const [warning, setWarning] = useState("");
   const [windData, setWindData] = useState([]);
-  const [windTimeData, setWindTimeData] = useState([]);
+  const [windAndRainTimeData, setWindAndRainTimeData] = useState([]);
+  const [rainData, setRainData] = useState([]);
   const svgRef = useRef();
+  const svgRefRain = useRef();
 
   const options = [
     'Helsinki',
@@ -42,7 +43,6 @@ function App () {
   //Efekti, jota käytetään tuulen nopeuden grafiikan näyttämiseen
   useEffect(() => {
     const svg = d3.select(svgRef.current);
-    console.log(windData);
     let maxValue = Math.ceil(Math.max(...windData)) + 2;
 
     //X-akselin skaalaus
@@ -58,7 +58,7 @@ function App () {
     //X-akseli
     const xAxis = d3.axisBottom(xScale)
       .ticks(windData.length)
-      .tickFormat(index => windTimeData[index]);
+      .tickFormat(index => windAndRainTimeData[index]);
     svg.select(".x-axis")
       .style("transform", "translateY(150px)")
       .call(xAxis);
@@ -80,7 +80,45 @@ function App () {
       .attr("d", windLine)
       .attr("fill", "none")
       .attr("stroke", "blue");
-  }, [windData, windTimeData]);
+  }, [windData, windAndRainTimeData]);
+
+  useEffect(() => {
+    const svg = d3.select(svgRefRain.current);
+    let maxValue = Math.ceil(Math.max(...rainData)) + 0.5;
+    const xScale = d3.scaleBand()
+      .domain(rainData.map((value, index) => index))
+      .range([0,300])
+      .padding(0.5);
+
+    const yScale = d3.scaleLinear()
+      .domain([0, maxValue])
+      .range([150, 0]);
+
+    const xAxis = d3.axisBottom(xScale)
+      .ticks(rainData.length)
+      .tickFormat(index => windAndRainTimeData[index]);
+    svg.select(".x-axis")
+      .style("transform", "translateY(150px)")
+      .call(xAxis);
+
+    const yAxis = d3.axisRight(yScale)
+      .tickFormat(value => value + " mm");
+    svg.select(".y-axis")
+      .style("transform", "translateX(300px)")
+      .call(yAxis);
+
+    svg.selectAll(".bar")
+      .data(rainData)
+      .join("rect")
+      .attr("class", "bar")
+      .attr("fill", "royalblue")
+      .style("transform", "scale(1, -1)")
+      .attr("x", (value, index) => xScale(index))
+      .attr("y", -150)
+      .attr("width", xScale.bandwidth())
+      .transition()
+      .attr("height", value => 150 - yScale(value));
+  }, [rainData, windAndRainTimeData]);
 
   //Haetaan annettujen parametrien mukainen data ilmatieteenlaitoksen latauspalvelusta
   function getData() {
@@ -114,7 +152,6 @@ function App () {
         var dateString = timeMs.getDate() + "." + (timeMs.getMonth() + 1) + "." + timeMs.getFullYear();
         tempDay.push([dateString, pair.value]);
       }
-      setTemperatures(tempDay);
       setWarning("");
       
 
@@ -144,14 +181,14 @@ function App () {
       setMaxTemperatures(tempWeekMax);
     } else {
       console.log("Error");
-      setTemperatures([]);
+      setMaxTemperatures([]);
       setWarning("Tarkista hakuehdot!");
       return;
     }
   }
 
   //Haetaan annettujen parametrien mukainen tuulidata ilmatieteenlaitoksen latauspalvelusta
-  function getWindData() {
+  function getWindAndRainData() {
     var SERVER_URL = "http://opendata.fmi.fi/wfs";
     var STORED_QUERY_OBSERVATION = "fmi::observations::weather::multipointcoverage";
     var parser = new Metolib.WfsRequestParser();
@@ -161,52 +198,66 @@ function App () {
     parser.getData({
     url : SERVER_URL,
     storedQueryId: STORED_QUERY_OBSERVATION,
-    requestParameter : "ws_10min",
+    requestParameter : "ws_10min,r_1h",
     begin : pvm,
     end : uusiEnd,
     timestep : 60 * 60 * 1000,
     sites : inputCity,
     callback : function(data, errors) {
-      handleWindData(data, errors);
+      handleWindAndRainData(data, errors);
     }
    });
   }
 
   //Käsitellään ja asetetaan haettu data. Jos virheitä, näytetään varoitusviesti.
-  function handleWindData(data, errors) {
+  function handleWindAndRainData(data, errors) {
+    console.log(data);
     if (errors.length === 0) {
       let windAr = [];
+      let rainAr = [];
       let allTimes = [];
-      let windTimes = [];
-      console.log(data);
       for (const pair of data.locations[0].data.ws_10min.timeValuePairs) {
         var timeMs = new Date(pair.time);
         var dateString = timeMs.getDate() + "." + (timeMs.getMonth() + 1) + ".";
         allTimes.push(dateString);
         windAr.push(pair.value);
       }
-      let maxAr = [];
-      let j = 0;
-      let limit = 24;
-      for (let i = 0; i<7; i++) {
-        let max = -1;
-        for (j; j<limit; j++) {
-          if (windAr[j] > max) {
-            max = windAr[j];
-          }
-        }
-        windTimes.push(allTimes[j-1]);
-        maxAr.push(max);
-        limit += 24;
+      for (const pair of data.locations[0].data.r_1h.timeValuePairs) {
+        rainAr.push(pair.value);
       }
+      let maxAr = [];
+      let maxTimes = [];
+      rainAndWindMax(windAr, allTimes, maxAr, maxTimes);
       console.log(maxAr);
       setWindData(maxAr);
-      setWindTimeData(windTimes);
+      setWindAndRainTimeData(maxTimes);
+      maxAr = [];
+      maxTimes = [];
+      rainAndWindMax(rainAr, allTimes, maxAr, maxTimes);
+      console.log(maxAr);
+      setRainData(maxAr);
     } else {
       console.log("Error");
       setWindData([]);
-      setWindTimeData([]);
+      setRainData([]);
+      setWindAndRainTimeData([]);
       return;
+    }
+  }
+
+  function rainAndWindMax(elementAr, allTimes, maxAr, maxTimes) {
+    let j = 0;
+    let limit = 24;
+    for (let i = 0; i<7; i++) {
+      let max = 0;
+      for (j; j<limit; j++) {
+        if (elementAr[j] > max) {
+          max = elementAr[j];
+        }
+      }
+      maxTimes.push(allTimes[j-1]);
+      maxAr.push(max);
+      limit += 24;
     }
   }
 
@@ -221,7 +272,7 @@ function App () {
   const handleClick = (event) => {
     event.preventDefault();
     getData();
-    getWindData();
+    getWindAndRainData();
   }
 
   const onSelect = (event) => {
@@ -252,6 +303,10 @@ function App () {
             <g className="x-axis" />
             <g className="y-axis" />
           </svg>
+          <svg ref={svgRefRain}>
+            <g className="x-axis" />
+            <g className="y-axis" />
+        </svg>
         </div>
       </div>
       <div className="weatherData">
