@@ -54,3 +54,20 @@ svg {
   background: #eeeeee;
   overflow: visible;
 }
+
+nav {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 40px;
+  background-color: rgb(194, 227, 240);
+}
+
+.links {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  list-style: none;
+  width: 40%;
+}
