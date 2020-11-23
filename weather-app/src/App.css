@@ -71,3 +71,38 @@ nav {
   list-style: none;
   width: 40%;
 }
+
+#dayTop {
+  margin: auto;
+  margin-top: 10px;
+  width: 50%;
+  border: 2px solid rgb(202, 202, 202);
+  border-radius: 25px;
+}
+
+.topinfo {
+  display: flex;
+  justify-content: space-around;
+}
+
+.imgdiv {
+  margin: auto;
+}
+
+.maxmintemp {
+  display: flex;
+  margin: 30px;
+}
+
+.maxmint {
+  font-size: 70px;
+}
+
+.sources {
+  margin-top: 100px;
+  width: 100%;
+}
+
+.topcity {
+  font-size: x-large;
+}

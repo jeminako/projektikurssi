@@ -4,6 +4,7 @@ import Metolib from '@fmidev/metolib';
 import * as d3 from 'd3';
 import Dropdown from 'react-dropdown';
 import 'react-dropdown/style.css';
+import Sources from './Sources';
 
 function Home() {
 
@@ -208,16 +209,16 @@ function Home() {
     let pvm = new Date(dateParts[2], dateParts[1]-1, dateParts[0], 0, 0, 0);
     let uusiEnd = new Date(pvm.getTime() + 604800000);
     parser.getData({
-    url : SERVER_URL,
-    storedQueryId: STORED_QUERY_OBSERVATION,
-    requestParameter : "ws_10min,r_1h",
-    begin : pvm,
-    end : uusiEnd,
-    timestep : 60 * 60 * 1000,
-    sites : inputCity,
-    callback : function(data, errors) {
-      handleWindAndRainData(data, errors);
-    }
+      url : SERVER_URL,
+      storedQueryId: STORED_QUERY_OBSERVATION,
+      requestParameter : "ws_10min,r_1h",
+      begin : pvm,
+      end : uusiEnd,
+      timestep : 60 * 60 * 1000,
+      sites : inputCity,
+      callback : function(data, errors) {
+        handleWindAndRainData(data, errors);
+      }
    });
   }
 
@@ -376,10 +377,7 @@ function Home() {
           </div>
         </div>
       </div>
-      <div className="sources">
-        <header>Lähteet:</header>
-        <p>Kaikki sovelluksen data on saatu Ilmatieteen laitoksen toimittamista <a href="https://www.ilmatieteenlaitos.fi/avoin-data">tietoaineistoista.</a> Data on lisensioitu © <a href="https://creativecommons.org/licenses/by/4.0/deed.fi">CC BY 4.0-lisenssillä.</a></p>
-      </div>
+      <Sources />
     </div>
   );
 }
