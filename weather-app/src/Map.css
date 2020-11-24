@@ -1,6 +1,19 @@
 /* Kartta */
 
 .leaflet-container {
-  width: 50%;
-  height: 70vh;
+  width: 100%;
+  height: 55vh;
+}
+
+#mapDiv table, tbody, tr{
+  width: 100%;
+}
+
+/* #mapCell {
+  width: 70%;
+} */
+
+#mapInfoCell {
+  width: min(20em, 30vw);
+  vertical-align: top;
 }
