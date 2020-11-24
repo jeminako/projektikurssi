@@ -1,0 +1,6 @@
+/* Kartta */
+
+.leaflet-container {
+  width: 50%;
+  height: 70vh;
+}
