@@ -7,6 +7,8 @@ function Map() {
 
     const KOMPASSI = [62.242631, 25.747356];
 
+    const PLACE_TYPES = ["town", "city", "municipality", "county"];
+
     const [clickPos, setClickPos] = useState(KOMPASSI);
     const [inputCity, setInputCity] = useState("Jyväskylä");
     const [inputDate, setInputDate] = useState("");
@@ -36,6 +38,23 @@ function Map() {
             'https://nominatim.openstreetmap.org/reverse?lat=' + e.latlng.lat + "&lon=" + e.latlng.lng + "&format=jsonv2&json_callback=?",
             function (data) {
                 console.log(data);
+
+                if (data === undefined || data === null || data.address === undefined || data.address === null) {
+                    //
+                }
+                else {
+                    let addr = data.address;
+    
+                    for (let pt of PLACE_TYPES) {
+                        if (addr[pt] !== undefined) {
+                            setInputCity(addr[pt]);
+                            console.log(addr[pt]);
+                            return;
+                        }
+                    }
+                }
+                //Aseta koords
+                setInputCity("[" + (Math.round(e.latlng.lat * 100000) / 1000000) + ", " + (Math.round(e.latlng.lng * 100000) / 1000000) + "]");
             }
         );
     }
