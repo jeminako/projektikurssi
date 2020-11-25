@@ -17,3 +17,7 @@
   width: min(20em, 30vw);
   vertical-align: top;
 }
+
+.error {
+  color: red;
+}
