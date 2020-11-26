@@ -10,15 +10,18 @@ function Map() {
     const KOMPASSI = [62.242631, 25.747356];
 
     /** Erilaisia tyyppjeä joita nominativin antamassa address-oliossa voi olla nimettynä */
-    const PLACE_TYPES = ["town", "city", "municipality", "county"];
+    const PLACE_TYPES = ["village", "town", "city", "municipality", "county", "country"];
 
     const [clickPos, setClickPos] = useState(KOMPASSI);
+    const [mapPos, setMapPos] = useState(KOMPASSI);
     const [inputCity, setInputCity] = useState("Jyväskylä");
     const [selectedLocation, setSelectedLocation] = useState("Jyväskylä");
     const [inputDate, setInputDate] = useState("");
     const [searchError, setSearchError] = useState("");
+    const [allowSearch, setAllowSearch] = useState(true);
 
     /** Hakee JSONP-objektin URLstä
+     *  - Source: https://stackoverflow.com/questions/2499567/how-to-make-a-json-call-to-a-url/2499647#2499647
      * @param {Strgin} url URL jolla haetaan
      * @param {Function} success Mitä tehdään kun JSON-haku onnistui
      */
@@ -38,15 +41,76 @@ function Map() {
 
     }
 
-    function mapClick(e) {
-        setClickPos([e.latlng.lat, e.latlng.lng]);
+    /** Suorittaa tekstihaun nominativesta ja asetttaa tiedot jos haku onnistuu */
+    function textSearch() {
+        if (!allowSearch) {
+            console.log("Liian nopeita hakuja!");
+            return;
+        }
+
+        //Laitetaan haku jäähylle hetkeksi niin API ei suutu :)
+        searchCooldown();
+
+        setSearchError("");
+
+        if (inputCity.trim().length < 1) {
+            setSearchError("Ei syötettä");
+            return;
+        }
 
         //Hae paikka
         getJSONP(
-            'https://nominatim.openstreetmap.org/reverse?lat=' + e.latlng.lat + "&lon=" + e.latlng.lng + "&format=jsonv2&json_callback=?",
+             "https://nominatim.openstreetmap.org/search?countrycodes=fi&city=" + inputCity + "&limit=1&format=jsonv2&json_callback=?",
+            //"//https://nominatim.openstreetmap.org/search?q=" + inputCity + "&countrycodes=fi&limit=1&format=jsonv2&json_callback=?",
             function (data) {
-                //console.log(data);
+                console.log(data);
+                //Datassa on taulukko hakua vastaavista paikoista
 
+                if (data != null && data.length > 0) {
+                    //Järjestä "tärkeyden" mukaan, laskevasti
+                    data.sort(
+                        function (a, b) {
+                            return b.importance - a.importance;
+                        }
+                    );
+
+                    //Valitse eka
+                    let result = data[0];
+
+                    //Aseta sijainti ja paikka
+                    let coords = [result.lat, result.lon];
+                    setClickPos(coords);
+                    setMapPos(coords)
+                    setSelectedLocation(result.display_name.split(",")[0]);
+                }
+                else {
+                    setSearchError("Syötettä vastaavia tuloksia ei löytynyt")
+                }
+            }
+        );
+    }
+
+
+    /** Katsoo mistä paikasta karttaa klikattiin ja hakee ja asettaa paikan tiedot
+     * @param {Event} e HTML eventti
+     */
+    function mapClick(e) {
+        if (!allowSearch) {
+            console.log("Liian nopeita hakuja!");
+            return;
+        }
+
+        setClickPos([e.latlng.lat, e.latlng.lng]);
+
+        //Laitetaan haku jäähylle hetkeksi niin API ei suutu :)
+        searchCooldown();
+
+        //Hae paikka
+        getJSONP(
+            'https://nominatim.openstreetmap.org/reverse?lat=' + e.latlng.lat + "&lon=" + e.latlng.lng + "&zoom=10&format=jsonv2&json_callback=?",
+            function (data) {
+
+                /** Asetettava virhe */
                 var error = "";
                 /** Löytyikö paikalle nimi */
                 var loytyi = false;
@@ -58,14 +122,16 @@ function Map() {
                 else {
                     let addr = data.address;
 
+                    //Onko klik suomen alueella
                     if (data.address.country_code !== "fi") {
                         error = "Säätiedot saatavilla vain Suomessa";
                     }
 
+                    //Etsi sopivin paikannimi osoitetiedoista
                     for (let pt of PLACE_TYPES) {
                         if (addr[pt] !== undefined) {
                             setSelectedLocation(addr[pt]);
-                            setInputCity(addr[pt]);
+                            //setInputCity(addr[pt]);
                             loytyi = true;
                             break;
                         }
@@ -76,11 +142,22 @@ function Map() {
                     //Aseta koords
                     let s = latLngToString(e.latlng);
                     setSelectedLocation(s);
-                    setInputCity(s);
+                    //setInputCity(s);
                 }
 
                 setSearchError(error);
             }
+        );
+    }
+
+    /** Asettaa hakemisen väliaikaisesti estetyksi niin ei tule lähetettyjä liikaa kutsuja APIin */
+    function searchCooldown() {
+        setAllowSearch(false);
+        setTimeout(
+            () => {
+                setAllowSearch(true);
+            },
+            1000
         );
     }
 
@@ -138,7 +215,7 @@ function Map() {
                     <tr>
                         <td>
                             <input className="date" value={inputCity} onChange={handleInput.bind(null, "city")} placeholder="Valitse kartalta tai hae" />
-                            <button>Etsi sijainti</button>
+                            <button onClick={textSearch}>Etsi sijainti</button>
                         </td>
                     </tr>
                     <tr>
@@ -153,7 +230,7 @@ function Map() {
                 <tbody>
                     <tr>
                         <td id="mapCell">
-                            <LeafletMap center={KOMPASSI} zoom={10} onclick={mapClick}>
+                            <LeafletMap id="leafletMap" center={mapPos} zoom={9} onclick={mapClick}>
                                 <TileLayer
                                     attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
                                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
