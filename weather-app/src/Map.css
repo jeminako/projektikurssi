@@ -9,15 +9,19 @@
   width: 100%;
 }
 
-/* #mapCell {
-  width: 70%;
-} */
+#mapCell {
+  vertical-align: top;
+} 
 
 #mapInfoCell {
-  width: min(20em, 30vw);
+  width: min(20em, 35vw);
   vertical-align: top;
 }
 
 .error {
   color: red;
+}
+
+#weatherInfoTable td {
+  text-align: left;
 }
