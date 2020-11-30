@@ -16,6 +16,7 @@ function Home() {
   const [windData, setWindData] = useState([]);
   const [windAndRainTimeData, setWindAndRainTimeData] = useState([]);
   const [rainData, setRainData] = useState([]);
+  const [forecast, setForecast] = useState([])
   const svgRef = useRef();
   const svgRefRain = useRef();
   const svgRefForecast = useRef();
@@ -42,6 +43,15 @@ function Home() {
     'Turku',
     'Vaasa'
   ];
+
+  useEffect(() => {
+    fetch('/api').then(response => {
+      if(response.ok) {
+        return response.json()
+      }
+    }).then(data => console.log(data))
+  },[])
+
 
   //Efekti, jota käytetään tuulen nopeuden grafiikan näyttämiseen
   useEffect(() => {
