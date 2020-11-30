@@ -5,7 +5,11 @@
   height: 55vh;
 }
 
-#mapDiv table, tbody, tr{
+#baseTable{
+  width: 100%;
+}
+
+#baseTable table, tbody, tr{
   width: 100%;
 }
 
@@ -22,6 +26,10 @@
   color: red;
 }
 
-#weatherInfoTable td {
+#weatherInfoTable td, th{
+  text-align: left;
+}
+
+.leftAlign {
   text-align: left;
 }
