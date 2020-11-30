@@ -16,7 +16,8 @@ function Home() {
   const [windData, setWindData] = useState([]);
   const [windAndRainTimeData, setWindAndRainTimeData] = useState([]);
   const [rainData, setRainData] = useState([]);
-  const [forecast, setForecast] = useState([])
+  const [forecast, setForecast] = useState([]);
+  const [maxForecast, setMaxForecast] = useState([]);
   const svgRef = useRef();
   const svgRefRain = useRef();
   const svgRefForecast = useRef();
@@ -49,7 +50,7 @@ function Home() {
       if(response.ok) {
         return response.json()
       }
-    }).then(data => console.log(data))
+    }).then(data => setForecast(data))
   },[])
 
 
@@ -184,6 +185,7 @@ function Home() {
       let apuMaximi = [];
       let suurinPari;
       var i = 1;
+      let pvmHelper = [];
 
       for (const pari of tempDay) {
         apuMaximi.push(pari);
@@ -193,6 +195,7 @@ function Home() {
             if (suurin < lampotila) suurin = lampotila;
           }
           suurinPari = [pari[0], suurin]
+          pvmHelper.push(pari[0]);
           tempWeekMax.push(suurinPari);
           apuMaximi = [];
           i = 1;
@@ -201,6 +204,7 @@ function Home() {
         i++;
       }
       setMaxTemperatures(tempWeekMax);
+      forecastMaxWeather(pvmHelper);
     } else {
       //Toiminnot, jos datassa virheitä
       console.log("Error");
@@ -209,6 +213,49 @@ function Home() {
       return;
     }
   }
+
+  //Etsitään ennustusten oikeasta päivästä data
+  function parseForecast(dateData) {
+    let dataAr = [];
+    for (let i = 0; i<dateData.length; i++) {
+      if (dateData[i][0] === inputCity) {
+        let weatherData = dateData[i][1];
+        weatherData = weatherData.trim();
+        dataAr = weatherData.split(/[\s]+/);
+      }
+    }
+    return dataAr;
+  }
+
+  function forecastMaxWeather(pvmHelper) {
+    let dateParts = inputDate.split('/').map(Number);
+    let dateString = dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0];
+    let dateId = forecast[dateString].id;
+    let keys = Object.keys(forecast);
+    let maxAr = [];
+    let index = 0;
+    for (let i = dateId; i<dateId+7; i++) {
+      let data = [];
+      for (let j = 0; j<keys.length; j++) {
+        let key = keys[j];
+        if (forecast[key].id === i) {
+          let dateData = forecast[key].data;
+          data = parseForecast(dateData);
+          break;
+        }
+      }
+      let max = -1000;
+      for (let k = 0; k<24; k++) {
+        if (parseFloat(data[k]) > max) {
+          max = parseFloat(data[k]);
+        }
+      }
+      maxAr.push([pvmHelper[index], max]);
+      index++;
+    }
+    setMaxForecast(maxAr);
+  }
+
 
   //Haetaan annettujen parametrien mukainen tuuli- ja sadedata ilmatieteenlaitoksen latauspalvelusta
   function getWindAndRainData() {
@@ -363,7 +410,7 @@ function Home() {
       <div className="weatherData">
         <header>FORECAST</header>
         <div className="weatherBar">
-          {maxTemperatures.map((item, index) => (
+          {maxForecast.map((item, index) => (
               <div key={index + "div"} className="temp">
                 <header key={index + "time"} className="time">{item[0]}</header>
                 <div key={index + "t"} className="t">{item[1]}</div>
