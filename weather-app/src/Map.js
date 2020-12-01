@@ -128,6 +128,14 @@ const paikat = [
     },
 ];
 
+/** Palauttaa annetun jonon jos epätyhjä, muuten
+ * @param {String} stringIn Mitä tutkitaan
+ * @param {String} placeholder Mitä jos tyhjä
+ */
+function stringOr(stringIn, placeholder = "-") {
+    return stringIn.length > 0 ? stringIn : placeholder;
+}
+
 function Map() {
 
     /** JKL kompassi koords :D */
@@ -135,6 +143,11 @@ function Map() {
 
     /** Erilaisia tyyppjeä joita nominativin antamassa address-oliossa voi olla nimettynä */
     const PLACE_TYPES = ["village", "town", "city", "municipality", "county", "country"];
+
+    const nameSort = "name";
+    const tempSort = "temp";
+    const rainSort = "rain";
+    const windSort = "wind";
 
     const [clickPos, setClickPos] = useState(KOMPASSI);
     const [mapPos, setMapPos] = useState(KOMPASSI);
@@ -146,10 +159,12 @@ function Map() {
 
     const [temps, setTemps] = useState([]);
     const [ykTime, setYkTime] = useState(12);
-    const [ykSort, setYkSort] = useState({
-        "type": "",
-        "dir": 1
-    });
+    const [ykSort, setYkSort] = useState(
+        {
+            "type": "",
+            "dir": 1
+        }
+    );
 
     /** Pyytää säätilan haun
      * @param {Event} e HTML eventti
@@ -169,6 +184,11 @@ function Map() {
             console.log("Invalid date!");
             return;
         }
+
+        setYkSort({
+            "type": "",
+            "dir": 1
+        });
 
         //Käytä annettua paikkaa tai valmista settiä
         let hakupaikka = (selectedLocation !== yk) ? selectedLocation : (paikat.map(function (p) {
@@ -206,11 +226,13 @@ function Map() {
                 /** Taulukko säädatasta */
                 var newDatas = [];
                 for (let i = 0; i < paikat.length; i++) {
-                    newDatas.push(handleWeatherLocationData(data.locations[i].data, paikat[i].name));
+                    newDatas.push(handleWeatherLocationData(data.locations[i].data, paikat[i].name, paikat[i].coordinates));
                 }
                 setTemps(newDatas);
             }
             else {
+                setTemps([handleWeatherLocationData(data.locations[0].data, selectedLocation)]);
+
                 ///** Taulukko säädatasta */
                 //var newDatas = [];
                 // var wData = data.locations[0].data;
@@ -242,7 +264,6 @@ function Map() {
                 // }
 
                 // setTemps(newDatas);
-                setTemps([handleWeatherLocationData(data.locations[0].data, selectedLocation)]);
             }
 
         }
@@ -255,14 +276,15 @@ function Map() {
      * @param {*} locationData Sääpaikkadata
      * @param {String} locationName Paikan nimi
      */
-    function handleWeatherLocationData(locationData, locationName = "") {
+    function handleWeatherLocationData(locationData, locationName = "", coords = null) {
         var tempPairs = locationData.temperature.timeValuePairs;
         var rainPairs = locationData.r_1h.timeValuePairs;
         var windPairs = locationData.ws_10min.timeValuePairs;
 
         let data = {
             "location": locationName,
-            "weatherData": []
+            "weatherData": [],
+            "coordinates": coords
         };
 
         for (let i = 0; i < tempPairs.length - 1; i++) {
@@ -374,15 +396,17 @@ function Map() {
 
 
     /** Katsoo mistä paikasta karttaa klikattiin ja hakee ja asettaa paikan tiedot
+     * @param {Boolean} centerMap Keskitetäänkö kartta
      * @param {Event} e HTML eventti
      */
-    function mapClick(e) {
+    function mapClick(centerMap, e) {
         if (searchCooldown()) {
             console.log("Liian nopeita hakuja!");
             return;
         }
 
         setClickPos([e.latlng.lat, e.latlng.lng]);
+        centerMap && setMapPos([e.latlng.lat, e.latlng.lng]);
 
         //Hae paikka
         getJSONP(
@@ -506,13 +530,16 @@ function Map() {
 
     /**Palauttaa otsikkorivin säätableen */
     function weatherTableHeaders() {
+
+        var sortSign = 1;
+
         if (selectedLocation === yk) {
             return (
                 <tr>
-                    <th onClick={() => sortWeatherData(sortWeatherDataName, "name")}>Paikka</th>
-                    <th onClick={() => sortWeatherData(sortWeatherDataTemp, "temp")}>Lämpötila</th>
-                    <th onClick={() => sortWeatherData(sortWeatherDataRain, "rain")}>Sade</th>
-                    <th onClick={() => sortWeatherData(sortWeatherDataWind, "wind")}>Tuuli</th>
+                    <th onClick={() => sortWeatherData(sortWeatherDataName, nameSort)}>{"Paikka" + sortMerkki(nameSort)}</th>
+                    <th onClick={() => sortWeatherData(sortWeatherDataTemp, tempSort)}>{"Lämpötila" + sortMerkki(tempSort)}</th>
+                    <th onClick={() => sortWeatherData(sortWeatherDataRain, rainSort)}>{"Sade" + sortMerkki(rainSort)}</th>
+                    <th onClick={() => sortWeatherData(sortWeatherDataWind, windSort)}>{"Tuuli" + sortMerkki(windSort)}</th>
                 </tr>
             );
         }
@@ -527,52 +554,82 @@ function Map() {
             );
         }
 
+        /** Sorttaa säädatan funktiolla ja tarkastaa tyypin
+         * @param {Function(a,b)} sortFunc Vertailufunktio
+         * @param {String} type Järjestysperusta
+         */
         function sortWeatherData(sortFunc, type) {
             if (temps.length < 1) return;
-            setTemps(Array.from(temps).sort(sortFunc));
+
+            sortSign = ykSort.dir;
+
             if (ykSort.type === type) {
-                console.log("sama");
+                sortSign = -sortSign;
                 setYkSort({
                     "type": ykSort.type,
                     "dir": -ykSort.dir
                 });
             }
             else {
-                console.log("eri");
+                sortSign = 1;
                 setYkSort({
                     "type": type,
                     "dir": 1
                 });
             }
+
+            setTemps(Array.from(temps).sort(sortFunc));
         }
 
+        /** Palauttaa sopivan merkin näytettäväksi järjestystyypille
+         * @param {String} sortType Järjestysperusta jota katsotaan
+         */
+        function sortMerkki(sortType) {
+            return ykSort.type === sortType ? (ykSort.dir > 0 ? "↑" : "↓") : "";
+        }
+
+        /** Vertaa nimen mukaan */
         function sortWeatherDataName(a, b) {
             let aName = a.location;
             let bName = b.location;
 
-            return ykSort.dir * (aName < bName ? -1 : (bName < aName ? 1 : 0));
+            // return ykSort.dir * (aName < bName ? -1 : (bName < aName ? 1 : 0));
+            return sortSign * (aName < bName ? -1 : (bName < aName ? 1 : 0));
         }
 
+        /** Vertaa sateen mukaan */
         function sortWeatherDataRain(a, b) {
             console.log(a);
             let aVal = a.weatherData[Number.parseInt(ykTime)].rain;
             let bVal = b.weatherData[Number.parseInt(ykTime)].rain;
 
-            return ykSort.dir * (aVal < bVal ? -1 : (bVal < aVal ? 1 : 0));
+            if (aVal.length < 1) return 1;
+            if (bVal.length < 1) return -1;
+
+            return sortSign * (aVal < bVal ? -1 : (bVal < aVal ? 1 : 0));
         }
 
+        /** Vertaa lämpötilan mukaan */
         function sortWeatherDataTemp(a, b) {
-            let aVal = a.weatherData[Number.parseInt(ykTime)].temp;
-            let bVal = b.weatherData[Number.parseInt(ykTime)].temp;
+            let aVal = a.weatherData[ykTime].temp;
+            let bVal = b.weatherData[ykTime].temp;
 
-            return ykSort.dir * (aVal < bVal ? -1 : (bVal < aVal ? 1 : 0));
+            if (aVal.length < 1) return 1;
+            if (bVal.length < 1) return -1;
+
+            return sortSign * (Number.parseFloat(aVal) - Number.parseFloat(bVal));
+            // return sortSign * (aVal < bVal ? -1 : (bVal < aVal ? 1 : 0));
         }
 
+        /** Vertaa tuulen mukaan */
         function sortWeatherDataWind(a, b) {
             let aVal = a.weatherData[Number.parseInt(ykTime)].wind;
             let bVal = b.weatherData[Number.parseInt(ykTime)].wind;
 
-            return ykSort.dir * (aVal < bVal ? -1 : (bVal < aVal ? 1 : 0));
+            if (aVal.length < 1) return 1;
+            if (bVal.length < 1) return -1;
+
+            return sortSign * (aVal < bVal ? -1 : (bVal < aVal ? 1 : 0));
         }
     }
 
@@ -627,6 +684,73 @@ function Map() {
         }
     }
 
+    /** Piirtää kartan. Yleiskatsaukessa zoomaa kaikkiin */
+    function drawMap() {
+        if (selectedLocation === yk) {
+            return (
+                <LeafletMap id="leafletMap" center={mapPos} bounds={paikat.map((p) => p.coordinates)} onClick={mapClick.bind(null, true)} doubleClickZoom={false}>
+                    <TileLayer
+                        attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    {drawMarkers()}
+                </LeafletMap>
+            );
+        }
+        else {
+            return (
+                <LeafletMap id="leafletMap" center={mapPos} zoom={9} onClick={mapClick.bind(null, false)} doubleClickZoom={false}>
+                    <TileLayer
+                        attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    {drawMarkers()}
+                </LeafletMap>
+            );
+        }
+    }
+
+    /** Piirtää valitun sijainnin kartalle markerina */
+    function drawMarkers() {
+        if (selectedLocation === yk) {
+
+            if (temps.length > 0) {
+                return temps.map(
+                    function (tp) {
+                        return tp.coordinates !== null && (
+                            <Marker position={tp.coordinates} key={"city_marker_overview_" + key++}>
+                                <Popup>
+                                    {tp.location}<br />
+                                    {tp.weatherData[ykTime].temp + "°C"}<br />
+                                    {stringOr(tp.weatherData[ykTime].wind, "-") + " m/s"}<br />
+                                    {stringOr(tp.weatherData[ykTime].rain, "-") + " mm"}<br />
+                                </Popup>
+                            </Marker>
+                        );
+                    }
+                );
+            }
+            return paikat.map(
+                function (paikka) {
+                    return (
+                        <Marker position={paikka.coordinates} key={"city_marker_overview_" + key++}>
+                            <Popup>
+                                {paikka.name}<br />
+                            </Popup>
+                        </Marker>
+                    );
+                }
+            );
+        }
+        else {
+            return (
+                <Marker position={clickPos}>
+                    <Popup>{selectedLocation}<br />{"[" + clickPos.join(",") + "]"}</Popup>
+                </Marker>
+            );
+        }
+    }
+
     return (
         <div className='App' id="mapDiv">
             <h1>Map</h1>
@@ -648,9 +772,10 @@ function Map() {
                             <button onClick={
                                 (e) => {
                                     //setInputCity(yk);
-                                    setSelectedLocation(yk);
+                                    changeLocation(yk);
+                                    setSearchError("");
                                 }
-                            } disabled={!allowSearch}>{yk}</button>
+                            } disabled={false || !allowSearch}>{yk}</button>
                         </td>
                     </tr>
                 </tbody>
@@ -659,15 +784,7 @@ function Map() {
                 <tbody>
                     <tr>
                         <td id="mapCell">
-                            <LeafletMap id="leafletMap" center={mapPos} zoom={9} onClick={mapClick} doubleClickZoom={false}>
-                                <TileLayer
-                                    attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                />
-                                <Marker position={clickPos}>
-                                    <Popup>{selectedLocation}<br />{clickPos}</Popup>
-                                </Marker>
-                            </LeafletMap>
+                            {drawMap()}
                         </td>
                         <td id="mapInfoCell">
                             <h2>{selectedLocation}<br />{inputDate} {selectedLocation === yk && ("klo " + ykTime)}</h2>
