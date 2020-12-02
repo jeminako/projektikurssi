@@ -18,14 +18,17 @@ function Navigation() {
     return (
         <nav>
             <ul className='links'>
-                <Link style={navStyle} to='/map'>
-                    <li>Map</li>
-                </Link>
                 <Link style={homeStyle} to='/'>
                     <li>Home</li>
                 </Link>
+                <Link style={navStyle} to='/map'>
+                    <li>Map</li>
+                </Link>
                 <Link style={navStyle} to='/topweather'>
                     <li>Top</li>
+                </Link>
+                <Link style={navStyle} to='/ourforecast'>
+                    <li>Our Forecast</li>
                 </Link>
             </ul>
         </nav>

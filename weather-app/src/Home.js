@@ -18,6 +18,8 @@ function Home() {
   const [rainData, setRainData] = useState([]);
   const [forecast, setForecast] = useState([]);
   const [maxForecast, setMaxForecast] = useState([]);
+  const [windForecast, setWindForecast] = useState([]);
+  const [rainForecast, setRainForecast] = useState([]);
   const svgRef = useRef();
   const svgRefRain = useRef();
   const svgRefForecast = useRef();
@@ -98,6 +100,50 @@ function Home() {
       .attr("stroke", "blue");
   }, [windData, windAndRainTimeData]);
 
+    //Efekti, jota käytetään tuulen nopeuden ennustuksien grafiikan näyttämiseen
+    useEffect(() => {
+      const svg = d3.select(svgRefForecast.current);
+      let maxValue = Math.ceil(Math.max(...windForecast)) + 2;
+  
+      //X-akselin skaalaus
+      const xScale = d3.scaleLinear()
+        .domain([0, windForecast.length-1])
+        .range([0,300]);
+  
+      //Y-akselin skaalaus
+      const yScale = d3.scaleLinear()
+        .domain([0, maxValue])
+        .range([150, 0]);
+  
+      //X-akseli
+      const xAxis = d3.axisBottom(xScale)
+        .ticks(windForecast.length)
+        .tickFormat(index => windAndRainTimeData[index]);
+      svg.select(".x-axis")
+        .style("transform", "translateY(150px)")
+        .call(xAxis);
+  
+      //Y-akseli
+      const yAxis = d3.axisRight(yScale)
+        .tickFormat(value => value + " m/s");
+      svg.select(".y-axis")
+        .style("transform", "translateX(300px)")
+        .call(yAxis);
+  
+      //Viiva
+      const windLine = d3.line()
+        .x((value, index) => xScale(index))
+        .y(yScale);
+      svg
+        .selectAll(".line")
+        .data([windForecast])
+        .join("path")
+        .attr("class", "line")
+        .attr("d", windLine)
+        .attr("fill", "none")
+        .attr("stroke", "blue");
+    }, [windForecast, windAndRainTimeData]);
+
   //Efekti, jota käytetään sademäärän grafiikan näyttämiseen
   useEffect(() => {
     const svg = d3.select(svgRefRain.current);
@@ -142,6 +188,96 @@ function Home() {
       .transition()
       .attr("height", value => 150 - yScale(value));
   }, [rainData, windAndRainTimeData]);
+
+    //Efekti, jota käytetään sademäärän grafiikan näyttämiseen
+  useEffect(() => {
+    const svg = d3.select(svgRefRain.current);
+    let maxValue = Math.ceil(Math.max(...rainData)) + 0.5;
+
+    //X-akselin skaalaus
+    const xScale = d3.scaleBand()
+      .domain(rainData.map((value, index) => index))
+      .range([0,300])
+      .padding(0.5);
+
+    //Y-akselin skaalaus
+    const yScale = d3.scaleLinear()
+      .domain([0, maxValue])
+      .range([150, 0]);
+
+    //X-akseli
+    const xAxis = d3.axisBottom(xScale)
+      .ticks(rainData.length)
+      .tickFormat(index => windAndRainTimeData[index]);
+    svg.select(".x-axis")
+      .style("transform", "translateY(150px)")
+      .call(xAxis);
+
+    //Y-akseli
+    const yAxis = d3.axisRight(yScale)
+      .tickFormat(value => value + " mm");
+    svg.select(".y-axis")
+      .style("transform", "translateX(300px)")
+      .call(yAxis);
+
+    //Palkit
+    svg.selectAll(".bar")
+      .data(rainData)
+      .join("rect")
+      .attr("class", "bar")
+      .attr("fill", "royalblue")
+      .style("transform", "scale(1, -1)")
+      .attr("x", (value, index) => xScale(index))
+      .attr("y", -150)
+      .attr("width", xScale.bandwidth())
+      .transition()
+      .attr("height", value => 150 - yScale(value));
+  }, [rainData, windAndRainTimeData]);
+
+  //Efekti, jota käytetään sademäärän ennustuksien grafiikan näyttämiseen
+  useEffect(() => {
+    const svg = d3.select(svgRefRainForecast.current);
+    let maxValue = Math.ceil(Math.max(...rainForecast)) + 0.5;
+
+    //X-akselin skaalaus
+    const xScale = d3.scaleBand()
+      .domain(rainForecast.map((value, index) => index))
+      .range([0,300])
+      .padding(0.5);
+
+    //Y-akselin skaalaus
+    const yScale = d3.scaleLinear()
+      .domain([0, maxValue])
+      .range([150, 0]);
+
+    //X-akseli
+    const xAxis = d3.axisBottom(xScale)
+      .ticks(rainForecast.length)
+      .tickFormat(index => windAndRainTimeData[index]);
+    svg.select(".x-axis")
+      .style("transform", "translateY(150px)")
+      .call(xAxis);
+
+    //Y-akseli
+    const yAxis = d3.axisRight(yScale)
+      .tickFormat(value => value + " mm");
+    svg.select(".y-axis")
+      .style("transform", "translateX(300px)")
+      .call(yAxis);
+
+    //Palkit
+    svg.selectAll(".bar")
+      .data(rainForecast)
+      .join("rect")
+      .attr("class", "bar")
+      .attr("fill", "royalblue")
+      .style("transform", "scale(1, -1)")
+      .attr("x", (value, index) => xScale(index))
+      .attr("y", -150)
+      .attr("width", xScale.bandwidth())
+      .transition()
+      .attr("height", value => 150 - yScale(value));
+  }, [rainForecast, windAndRainTimeData]);
 
   //Haetaan annettujen parametrien mukainen lämpötiladata ilmatieteenlaitoksen latauspalvelusta
   function getData() {
@@ -215,11 +351,15 @@ function Home() {
   }
 
   //Etsitään ennustusten oikeasta päivästä data
-  function parseForecast(dateData) {
+  function parseForecast(dateData, type) {
     let dataAr = [];
+    let dataindex = -1;
+    if (type === "temperature") dataindex = 1;
+    if (type === "wind") dataindex = 2;
+    if (type === "rain") dataindex = 3;
     for (let i = 0; i<dateData.length; i++) {
       if (dateData[i][0] === inputCity) {
-        let weatherData = dateData[i][1];
+        let weatherData = dateData[i][dataindex];
         weatherData = weatherData.trim();
         dataAr = weatherData.split(/[\s]+/);
       }
@@ -234,13 +374,14 @@ function Home() {
     let keys = Object.keys(forecast);
     let maxAr = [];
     let index = 0;
+    let dataType = "temperature";
     for (let i = dateId; i<dateId+7; i++) {
       let data = [];
       for (let j = 0; j<keys.length; j++) {
         let key = keys[j];
         if (forecast[key].id === i) {
           let dateData = forecast[key].data;
-          data = parseForecast(dateData);
+          data = parseForecast(dateData, dataType);
           break;
         }
       }
@@ -309,6 +450,9 @@ function Home() {
       dailyRainAmount(rainAmount, rainAr);
       console.log(rainAmount);
       setRainData(rainAmount);
+
+      //Tutkitaan ennusteet
+      rainAndWindForecast();
     } else {
       console.log("Error");
       setWindData([]);
@@ -316,6 +460,57 @@ function Home() {
       setWindAndRainTimeData([]);
       return;
     }
+  }
+
+  //Funktio ennustuksien näyttämiseen
+  function rainAndWindForecast() {
+    let dateParts = inputDate.split('/').map(Number);
+    let dateString = dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0];
+    let dateId = forecast[dateString].id;
+    let keys = Object.keys(forecast);
+    let maxWindAr = [];
+    let type = "wind";
+    for (let i = dateId; i<dateId+7; i++) {
+      let data = [];
+      for (let j = 0; j<keys.length; j++) {
+        let key = keys[j];
+        if (forecast[key].id === i) {
+          let dateData = forecast[key].data;
+          data = parseForecast(dateData, type);
+          break;
+        }
+      }
+      let max = 0;
+      for (let k = 0; k<24; k++) {
+        if (parseFloat(data[k]) > max) {
+          max = parseFloat(data[k]);
+        }
+      }
+      maxWindAr.push(max);
+    }
+    setWindForecast(maxWindAr);
+
+    let rainAmount = [];
+    type = "rain";
+    for (let i = dateId; i<dateId+7; i++) {
+      let data = [];
+      for (let j = 0; j<keys.length; j++) {
+        let key = keys[j];
+        if (forecast[key].id === i) {
+          let dateData = forecast[key].data;
+          data = parseForecast(dateData, type);
+          break;
+        }
+      }
+      let amount = 0;
+      for (let k = 0; k<24; k++) {
+        if (!isNaN(parseFloat(data[k]))) {
+          amount += parseFloat(data[k])
+        }
+      }
+      rainAmount.push(amount);
+    }
+    setRainForecast(rainAmount);
   }
 
   //Laskee viikolle päivän sademäärän

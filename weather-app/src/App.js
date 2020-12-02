@@ -4,6 +4,7 @@ import Navigation from './Navigation';
 import Home from './Home';
 import TopWeather from './TopWeather'
 import Map from './Map'
+import OurForecast from './OurForecast'
 import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
 
 function App () {
@@ -15,6 +16,7 @@ function App () {
           <Route path="/" exact component={Home}></Route>
           <Route path="/map" component={Map}></Route>
           <Route path="/topweather" component={TopWeather}></Route>
+          <Route path="/ourforecast" component={OurForecast}></Route>
         </Switch>
       </div>
     </Router>
