@@ -11,16 +11,17 @@ import Metolib from '@fmidev/metolib';
 /** Yleiskäyttöinen haku metoLibistä
  * @param {String[]} reqParams Mitä säätyyppejä haetaan?
  * @param {Date} startDate Aloitus PVM Datena
- * @param {Number} days Montako päivää haetaan aloituspäivästä
+ * @param {Number} hours Montako tuntia haetaan aloitusajasta
  * @param {String} location Sijainnin nimi
  * @param {Function} onSuccess kutsuttava funktio kun haku palautuu. Muodossa function(data={}, errors=[])
+ * @param {Boolean} forecast True jos halutaan ennuste. Default false
  */
-function getWeatherData(reqParams, startDate, days, location, onSuccess) {
+function getWeatherData(reqParams, startDate, hours, location, onSuccess, forecast = false) {
     let reqParam = reqParams.join(",");
     var SERVER_URL = "http://opendata.fmi.fi/wfs";
-    var STORED_QUERY_OBSERVATION = "fmi::observations::weather::multipointcoverage";
+    var STORED_QUERY_OBSERVATION = forecast ? "fmi::forecast::hirlam::surface::point::multipointcoverage" : "fmi::observations::weather::multipointcoverage";
     var parser = new Metolib.WfsRequestParser();
-    let endDate = new Date(startDate.getTime() + 86400000 * days);
+    let endDate = new Date(startDate.getTime() + 3600000 * hours);
 
     parser.getData({
         url: SERVER_URL,
@@ -133,10 +134,13 @@ const paikat = [
  * @param {String} placeholder Mitä jos tyhjä
  */
 function stringOr(stringIn, placeholder = "-") {
-    return stringIn.length > 0 ? stringIn : placeholder;
+    return (stringIn && stringIn.length > 0) ? stringIn : placeholder;
 }
 
 function Map() {
+    function TODAY_DATE_STRING() {
+        return new Date().toJSON().slice(0, 10);
+    }
 
     /** JKL kompassi koords :D */
     const KOMPASSI = [62.242631, 25.747356];
@@ -153,7 +157,7 @@ function Map() {
     const [mapPos, setMapPos] = useState(KOMPASSI);
     const [inputCity, setInputCity] = useState("");
     const [selectedLocation, setSelectedLocation] = useState("Jyväskylä");
-    const [inputDate, setInputDate] = useState(new Date().toJSON().slice(0, 10));
+    const [inputDate, setInputDate] = useState(TODAY_DATE_STRING());
     const [searchError, setSearchError] = useState("");
     const [allowSearch, setAllowSearch] = useState(true);
 
@@ -165,6 +169,27 @@ function Map() {
             "dir": 1
         }
     );
+
+    const weathergetParams = [
+        {
+            "visName": "Lämpötila",
+            "propertyName": "temp",
+            "observationParam": "temperature",
+            "forecastParam": "temperature"
+        },
+        {
+            "visName": "Tuulennopeus",
+            "propertyName": "wind",
+            "observationParam": "ws_10min",
+            "forecastParam": "WindSpeedMS"
+        },
+        {
+            "visName": "Sademäärä",
+            "propertyName": "rain",
+            "observationParam": "r_1h",
+            "forecastParam": ""
+        }
+    ];
 
     /** Pyytää säätilan haun
      * @param {Event} e HTML eventti
@@ -195,16 +220,83 @@ function Map() {
             return p.name;
         }));
 
-        console.log(hakupaikka);
+        //console.log(hakupaikka);
+        let obs_hours = 24;
+        let fc_hours = 0;
+        let obs_start_date = inputDateToDate(inputDate);
 
-        getWeatherData(
-            ["temperature", "ws_10min", "r_1h"],
-            inputDateToDate(inputDate),
-            1,
+        if (inputDate === TODAY_DATE_STRING()) {
+            //Osittainen ennuste
+            obs_hours = new Date().getHours() + 1;
+            fc_hours = 24 - obs_hours;
+        }
+        else if (new Date(inputDate).getTime() > new Date().getTime()) {
+            //Pelkkä ennuste
+            obs_hours = 0;
+            fc_hours = 24;
+        }
+
+        console.log("Observation hours: " + obs_hours);
+        console.log("Forecast hours: " + fc_hours);
+
+        //return;
+        let obs_params = [];
+        let fc_params = [];
+        for (let p of weathergetParams) {
+            p.observationParam.length > 0 && obs_params.push(p.observationParam);
+            p.forecastParam.length > 0 && fc_params.push(p.forecastParam);
+        }
+
+        obs_hours > 0 && getWeatherData(
+            obs_params,
+            obs_start_date,
+            obs_hours,
             hakupaikka,
             handleWeather
         );
+
+        fc_hours > 0 && getWeatherData(
+            fc_params,
+            new Date(obs_start_date.getTime() + 3600000 * obs_hours),
+            fc_hours,
+            hakupaikka,
+            handleForecast,
+            true //Ennuste
+        );
         // getWeatherData(["temperature"], inputDateToDate(inputDate), 1, selectedLocation, handleWeather);
+    }
+
+    /** Parsii ja asettaa säädatat ennusteen hakutuloksesta
+     * @param {*} data Saatu data ITLstä
+     * @param {*} errors Virheviestit hausta
+     */
+    function handleForecast(data, errors) {
+        console.log("Forecast data:");
+        console.log(data);
+
+        if (errors.length < 1) {
+            if (data.locations.length < 1) {
+                setSearchError("Ennustetietoja ei saatavilla tästä paikasta")
+                return;
+            }
+
+            if (selectedLocation === yk) {
+                /** Taulukko säädatasta */
+                var newDatas = [];
+                for (let i = 0; i < paikat.length; i++) {
+                    newDatas.push(handleWeatherLocationData(data.locations[i].data, paikat[i].name, paikat[i].coordinates, true));
+                }
+                setTemps(newDatas);
+            }
+            else {
+                setTemps([handleWeatherLocationData(data.locations[0].data, selectedLocation, mapPos, true)]);
+            }
+        }
+        else {
+            for (let e of errors) {
+                console.log(e);
+            }
+        }
     }
 
     /** Parsii ja asettaa säädatat hakutuloksesta
@@ -231,39 +323,7 @@ function Map() {
                 setTemps(newDatas);
             }
             else {
-                setTemps([handleWeatherLocationData(data.locations[0].data, selectedLocation)]);
-
-                ///** Taulukko säädatasta */
-                //var newDatas = [];
-                // var wData = data.locations[0].data;
-                // var tempPairs = wData.temperature.timeValuePairs;
-                // var rainPairs = wData.r_1h.timeValuePairs;
-                // var windPairs = wData.ws_10min.timeValuePairs;
-
-                // for (let i = 0; i < tempPairs.length - 1; i++) {
-                //     let dataCell = {};
-                //     let tp = tempPairs[i];
-                //     let dateTime = new Date(tp.time);
-
-                //     //Aseta aika
-                //     dataCell.time = "" + dateTime.getHours();
-                //     if (dataCell.time.length < 2) dataCell.time = "0" + dataCell.time;
-
-                //     //Lämpötila
-                //     dataCell.temp = Number.isNaN(tp.value) ? "" : ("" + tp.value);
-
-                //     //Sade
-                //     let rp = rainPairs[i];
-                //     dataCell.rain = Number.isNaN(rp.value) ? "" : ("" + rp.value);
-
-                //     //Tuuli
-                //     let wp = windPairs[i];
-                //     dataCell.wind = Number.isNaN(wp.value) ? "" : ("" + wp.value);
-
-                //     newDatas.push(dataCell);
-                // }
-
-                // setTemps(newDatas);
+                setTemps([handleWeatherLocationData(data.locations[0].data, selectedLocation, mapPos)]);
             }
 
         }
@@ -276,10 +336,8 @@ function Map() {
      * @param {*} locationData Sääpaikkadata
      * @param {String} locationName Paikan nimi
      */
-    function handleWeatherLocationData(locationData, locationName = "", coords = null) {
+    function handleWeatherLocationData(locationData, locationName = "", coords = null, isForecast = false) {
         var tempPairs = locationData.temperature.timeValuePairs;
-        var rainPairs = locationData.r_1h.timeValuePairs;
-        var windPairs = locationData.ws_10min.timeValuePairs;
 
         let data = {
             "location": locationName,
@@ -295,23 +353,67 @@ function Map() {
             //Aseta aika
             dataCell.time = "" + dateTime.getHours();
             if (dataCell.time.length < 2) dataCell.time = "0" + dataCell.time;
-
-            //Lämpötila
+            //Lämpö
             dataCell.temp = Number.isNaN(tp.value) ? "" : ("" + tp.value);
 
-            //Sade
-            let rp = rainPairs[i];
-            dataCell.rain = Number.isNaN(rp.value) ? "" : ("" + rp.value);
-
-            //Tuuli
-            let wp = windPairs[i];
-            dataCell.wind = Number.isNaN(wp.value) ? "" : ("" + wp.value);
+            for (let pi = 1; pi < weathergetParams.length; pi++) {
+                let p = weathergetParams[pi];
+                let param = isForecast ? p.forecastParam : p.observationParam;
+                if (param.length > 1) {
+                    let valuePair = locationData[param].timeValuePairs[i];
+                    dataCell[p.propertyName] = Number.isNaN(valuePair.value) ? "" : ("" + valuePair.value);
+                }
+            }
 
             data.weatherData.push(dataCell);
         }
 
         return data;
     }
+    // /** Käsittelee datan joka saatiin säähausta kyseiselle sijannille
+    //  * @param {*} locationData Sääpaikkadata
+    //  * @param {String} locationName Paikan nimi
+    //  */
+    // function handleWeatherLocationData(locationData, locationName = "", coords = null, isForecast = false) {
+    //     var tempPairs = locationData.temperature.timeValuePairs;
+    //     console.log(isForecast ? "f1" : "o1");
+    //     var rainPairs = locationData.r_1h.timeValuePairs;
+    //     console.log(isForecast ? "f2" : "o2");
+    //     var windPairs = locationData.ws_10min.timeValuePairs;
+    //     console.log(isForecast ? "f3" : "o3");
+
+    //     let data = {
+    //         "location": locationName,
+    //         "weatherData": [],
+    //         "coordinates": coords
+    //     };
+
+    //     for (let i = 0; i < tempPairs.length - 1; i++) {
+    //         let dataCell = {};
+    //         let tp = tempPairs[i];
+    //         let dateTime = new Date(tp.time);
+
+    //         //Aseta aika
+    //         dataCell.time = "" + dateTime.getHours();
+    //         if (dataCell.time.length < 2) dataCell.time = "0" + dataCell.time;
+
+    //         //Lämpötila
+    //         dataCell.temp = Number.isNaN(tp.value) ? "" : ("" + tp.value);
+
+    //         //Sade
+    //         let rp = rainPairs[i];
+    //         dataCell.rain = Number.isNaN(rp.value) ? "" : ("" + rp.value);
+
+    //         //Tuuli
+    //         let wp = windPairs[i];
+    //         dataCell.wind = Number.isNaN(wp.value) ? "" : ("" + wp.value);
+
+    //         data.weatherData.push(dataCell);
+    //     }
+
+    //     console.log(isForecast ? "f3" : "o3");
+    //     return data;
+    // }
 
     /** Vaihtaa valitun sijainnin ja tyhjentää säädatat
      * @param {String} newLocation Uusi sijainti
@@ -639,6 +741,9 @@ function Map() {
         if (selectedLocation === yk) {
             return temps.map(function (loc) {
                 let timedData = loc.weatherData[Math.min(Math.max(Math.round(ykTime), 0), 23)];
+                if (!timedData) {
+                    return undefined;
+                }
                 return (
                     <tr key={"weather_map_data_row_" + key++}>
                         <td>
@@ -648,13 +753,13 @@ function Map() {
                             {timedData.time}
                         </td> */}
                         <td>
-                            {timedData.temp.length > 0 ? (timedData.temp + "°C") : "-"}
+                            {(timedData.temp && timedData.temp.length > 0) ? (timedData.temp + "°C") : "-"}
                         </td>
                         <td>
-                            {timedData.rain.length > 0 ? (timedData.rain + " mm") : "-"}
+                            {(timedData.rain && timedData.rain.length > 0) ? (timedData.rain + " mm") : "-"}
                         </td>
                         <td>
-                            {timedData.wind.length > 0 ? (timedData.wind + " m/s") : "-"}
+                            {(timedData.wind && timedData.wind.length > 0) ? (timedData.wind + " m/s") : "-"}
                         </td>
                     </tr>
                 )
@@ -669,13 +774,13 @@ function Map() {
                                 {item.time}
                             </td>
                             <td>
-                                {item.temp.length > 0 ? (item.temp + "°C") : "-"}
+                                {(item.temp && item.temp.length > 0) ? (item.temp + "°C") : "-"}
                             </td>
                             <td>
-                                {item.rain.length > 0 ? (item.rain + " mm") : "-"}
+                                {(item.rain && item.rain.length > 0) ? (item.rain + " mm") : "-"}
                             </td>
                             <td>
-                                {item.wind.length > 0 ? (item.wind + " m/s") : "-"}
+                                {(item.wind && item.wind.length > 0) ? (item.wind + " m/s") : "-"}
                             </td>
                         </tr>
                     );
@@ -712,6 +817,17 @@ function Map() {
 
     /** Piirtää valitun sijainnin kartalle markerina */
     function drawMarkers() {
+        function getMarkerData(tp) {
+            if (tp.weatherData[ykTime]) {
+                return (<div>
+                    { tp.weatherData[ykTime].temp + "°C"} <br />
+                    { stringOr(tp.weatherData[ykTime].wind, "-") + " m/s"} <br />
+                    { stringOr(tp.weatherData[ykTime].rain, "-") + " mm"} <br />
+                </div>);
+            }
+            return undefined;
+        }
+
         if (selectedLocation === yk) {
 
             if (temps.length > 0) {
@@ -721,9 +837,7 @@ function Map() {
                             <Marker position={tp.coordinates} key={"city_marker_overview_" + key++}>
                                 <Popup>
                                     {tp.location}<br />
-                                    {tp.weatherData[ykTime].temp + "°C"}<br />
-                                    {stringOr(tp.weatherData[ykTime].wind, "-") + " m/s"}<br />
-                                    {stringOr(tp.weatherData[ykTime].rain, "-") + " mm"}<br />
+                                    {getMarkerData(tp)}
                                 </Popup>
                             </Marker>
                         );
