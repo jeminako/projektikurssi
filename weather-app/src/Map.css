@@ -28,8 +28,19 @@
 
 #weatherInfoTable td, th{
   text-align: left;
+  border-collapse: collapse;
 }
 
 .leftAlign {
+  text-align: left;
+}
+
+.forecastCell {
+  background-color: #e7f2ff;
+  text-align: left;
+}
+
+.observedCell {
+  background-color: #d8d8d8;
   text-align: left;
 }

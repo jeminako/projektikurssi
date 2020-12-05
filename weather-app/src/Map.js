@@ -181,15 +181,18 @@ function Map() {
             "visName": "Tuulennopeus",
             "propertyName": "wind",
             "observationParam": "ws_10min",
-            "forecastParam": "WindSpeedMS"
+            "forecastParam": "windSpeedMS"
         },
         {
             "visName": "Sademäärä",
             "propertyName": "rain",
             "observationParam": "r_1h",
-            "forecastParam": ""
+            "forecastParam": "precipitationAmount"
         }
     ];
+
+    var observedData = null;
+    var forecastData = null;
 
     /** Pyytää säätilan haun
      * @param {Event} e HTML eventti
@@ -247,22 +250,33 @@ function Map() {
             p.forecastParam.length > 0 && fc_params.push(p.forecastParam);
         }
 
-        obs_hours > 0 && getWeatherData(
-            obs_params,
-            obs_start_date,
-            obs_hours,
-            hakupaikka,
-            handleWeather
-        );
+        if (obs_hours > 0) {
+            getWeatherData(
+                obs_params,
+                obs_start_date,
+                obs_hours,
+                hakupaikka,
+                handleWeather
+            );
+        }
+        else {
+            observedData = [];
+        }
 
-        fc_hours > 0 && getWeatherData(
-            fc_params,
-            new Date(obs_start_date.getTime() + 3600000 * obs_hours),
-            fc_hours,
-            hakupaikka,
-            handleForecast,
-            true //Ennuste
-        );
+        if (fc_hours > 0) {
+            getWeatherData(
+                fc_params,
+                new Date(obs_start_date.getTime() + 3600000 * obs_hours),
+                fc_hours,
+                hakupaikka,
+                handleForecast,
+                true //Ennuste
+            );
+        }
+        else {
+            forecastData = [];
+        }
+
         // getWeatherData(["temperature"], inputDateToDate(inputDate), 1, selectedLocation, handleWeather);
     }
 
@@ -286,10 +300,14 @@ function Map() {
                 for (let i = 0; i < paikat.length; i++) {
                     newDatas.push(handleWeatherLocationData(data.locations[i].data, paikat[i].name, paikat[i].coordinates, true));
                 }
-                setTemps(newDatas);
+                forecastData = newDatas;
+                trySetDatas();
+                //setTemps(newDatas);
             }
             else {
-                setTemps([handleWeatherLocationData(data.locations[0].data, selectedLocation, mapPos, true)]);
+                forecastData = [handleWeatherLocationData(data.locations[0].data, selectedLocation, mapPos, true)];
+                trySetDatas();
+                //setTemps([handleWeatherLocationData(data.locations[0].data, selectedLocation, mapPos, true)]);
             }
         }
         else {
@@ -320,10 +338,14 @@ function Map() {
                 for (let i = 0; i < paikat.length; i++) {
                     newDatas.push(handleWeatherLocationData(data.locations[i].data, paikat[i].name, paikat[i].coordinates));
                 }
-                setTemps(newDatas);
+                observedData = newDatas;
+                //setTemps(newDatas);
+                trySetDatas();
             }
             else {
-                setTemps([handleWeatherLocationData(data.locations[0].data, selectedLocation, mapPos)]);
+                observedData = [handleWeatherLocationData(data.locations[0].data, selectedLocation, mapPos)];
+                //setTemps(observedData);
+                trySetDatas();
             }
 
         }
@@ -365,11 +387,14 @@ function Map() {
                 }
             }
 
+            dataCell.isForecast = isForecast;
+
             data.weatherData.push(dataCell);
         }
 
         return data;
     }
+
     // /** Käsittelee datan joka saatiin säähausta kyseiselle sijannille
     //  * @param {*} locationData Sääpaikkadata
     //  * @param {String} locationName Paikan nimi
@@ -414,6 +439,46 @@ function Map() {
     //     console.log(isForecast ? "f3" : "o3");
     //     return data;
     // }
+
+    /** Asettaa datat, jos molemmat datat jo saaneet vastauksen. Yhdistää ennuste- ja havaintodatan */
+    function trySetDatas() {
+        //Odota että molemmat on valmiina
+        if (observedData === null || forecastData === null) {
+            return;
+        }
+
+        let fullData = Array.from(observedData);
+
+        //Yhdistä datat
+        for (let fcd of forecastData) {
+            let exists = false;
+            //Katso onko paikkaan jo dataa
+            for (let ed of fullData) {
+                if (ed.location === fcd.location && ed.coordinates === fcd.coordinates) {
+                    //Löytyi, yhdistä datat olemassa olevaan
+                    for (let wd of fcd.weatherData) {
+                        ed.weatherData.push(wd);
+                    }
+                    
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
+                fullData.push(fcd);
+            }
+        }
+
+        //Järjestä kaikki ajan mukaan
+        for (let d of fullData) {
+            d.weatherData.sort(function(a,b) {
+                return Number.parseInt(a.time) - Number.parseInt(b.time);
+            });
+        }
+
+        //Lopulta aseta yhdistetty data
+        setTemps(fullData);
+    }
 
     /** Vaihtaa valitun sijainnin ja tyhjentää säädatat
      * @param {String} newLocation Uusi sijainti
@@ -741,6 +806,7 @@ function Map() {
         if (selectedLocation === yk) {
             return temps.map(function (loc) {
                 let timedData = loc.weatherData[Math.min(Math.max(Math.round(ykTime), 0), 23)];
+                let cellClass = timedData.isForecast ? "forecastCell" : "observedCell";
                 if (!timedData) {
                     return undefined;
                 }
@@ -752,13 +818,13 @@ function Map() {
                         {/* <td>
                             {timedData.time}
                         </td> */}
-                        <td>
+                        <td className = {cellClass}>
                             {(timedData.temp && timedData.temp.length > 0) ? (timedData.temp + "°C") : "-"}
                         </td>
-                        <td>
+                        <td className = {cellClass}>
                             {(timedData.rain && timedData.rain.length > 0) ? (timedData.rain + " mm") : "-"}
                         </td>
-                        <td>
+                        <td className = {cellClass}>
                             {(timedData.wind && timedData.wind.length > 0) ? (timedData.wind + " m/s") : "-"}
                         </td>
                     </tr>
@@ -768,8 +834,9 @@ function Map() {
         else {
             return temps[0].weatherData.map(
                 function (item) {
+                    let cellClass = item.isForecast ? "forecastCell" : "observedCell";
                     return (
-                        <tr key={"weather_map_data_row_" + key++}>
+                        <tr key={"weather_map_data_row_" + key++} className = {cellClass}>
                             <td>
                                 {item.time}
                             </td>
