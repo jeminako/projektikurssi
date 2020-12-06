@@ -56,7 +56,6 @@ function Home() {
   },[])
 
 
-  //testi
   //Efekti, jota käytetään tuulen nopeuden grafiikan näyttämiseen
   useEffect(() => {
     const svg = d3.select(svgRef.current);
