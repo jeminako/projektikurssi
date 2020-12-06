@@ -191,7 +191,9 @@ function Map() {
         }
     ];
 
+    /** Sisältää havaintodatan hetkellisesti haun aikana */
     var observedData = null;
+    /** Sisältää ennustedatan hetkellisesti haun aikana */
     var forecastData = null;
 
     /** Pyytää säätilan haun
@@ -214,7 +216,7 @@ function Map() {
         }
 
         setYkSort({
-            "type": "",
+            "type": nameSort,
             "dir": 1
         });
 
@@ -459,7 +461,7 @@ function Map() {
                     for (let wd of fcd.weatherData) {
                         ed.weatherData.push(wd);
                     }
-                    
+
                     exists = true;
                     break;
                 }
@@ -471,7 +473,7 @@ function Map() {
 
         //Järjestä kaikki ajan mukaan
         for (let d of fullData) {
-            d.weatherData.sort(function(a,b) {
+            d.weatherData.sort(function (a, b) {
                 return Number.parseInt(a.time) - Number.parseInt(b.time);
             });
         }
@@ -671,6 +673,75 @@ function Map() {
         return Math.round(num * mult) / mult;
     }
 
+    /** Sorttaa säädatan funktiolla ja tarkastaa tyypin
+     * @param {String} type Järjestysperusta
+     */
+    function sortWeatherData(type, toggleDir = true, time = -1) {
+
+        if (temps.length < 1) return;
+        var sortSign = ykSort.dir;
+        if (type.length < 1) {
+            type = ykSort.type;
+        }
+        if (time < 0) {
+            time = ykTime;
+        }
+        time = Math.min(23, Math.max(0, time));
+
+        if (ykSort.type === type) {
+            let mul = (toggleDir ? -1 : 1);
+
+            sortSign = mul * sortSign;
+            setYkSort({
+                "type": ykSort.type,
+                "dir": mul * ykSort.dir
+            });
+        }
+        else {
+            sortSign = 1;
+            setYkSort({
+                "type": type,
+                "dir": 1
+            });
+        }
+
+        if (type === nameSort) {
+            setTemps(Array.from(temps).sort(sortWeatherDataName));
+        }
+        else
+        {
+            setTemps(Array.from(temps).sort(sortProperty));
+        }
+
+        console.log("Sorted");
+
+        /** Vertaa sateen mukaan */
+        function sortProperty(a, b) {
+            let aVal = a.weatherData[time][type];
+            let bVal = b.weatherData[time][type];
+
+            if (aVal === undefined || bVal === undefined) {
+                return 0;
+            }
+
+            if (aVal.length < 1) return 1;
+            if (bVal.length < 1) return -1;
+
+            return sortSign * (aVal < bVal ? -1 : (bVal < aVal ? 1 : 0));
+        }
+
+        /** Vertaa nimen mukaan */
+        function sortWeatherDataName(a, b) {
+            let aName = a.location;
+            let bName = b.location;
+
+            // return ykSort.dir * (aName < bName ? -1 : (bName < aName ? 1 : 0));
+            return sortSign * (aName < bName ? -1 : (bName < aName ? 1 : 0));
+        }
+    }
+
+    //#region Render apustajat
+
     /** Asettaa tekstivaluen
      * @param {String} type Mitä muutetaan. Tulee löytyä switch-lauseesta
      * @param {Event} event Eventti inputista
@@ -687,6 +758,11 @@ function Map() {
             case 'city':
                 setInputCity(value);
                 break;
+            case 'ykTime':
+                let newTime = Number.parseInt(value.substring(0, 2));
+                setYkTime(newTime);
+                sortWeatherData("", false, newTime);
+                break;
             default:
                 console.log(`Uncaught input type ${type}.`);
         }
@@ -698,17 +774,25 @@ function Map() {
     /**Palauttaa otsikkorivin säätableen */
     function weatherTableHeaders() {
 
-        var sortSign = 1;
+        // var sortSign = 1;
 
         if (selectedLocation === yk) {
             return (
                 <tr>
-                    <th onClick={() => sortWeatherData(sortWeatherDataName, nameSort)}>{"Paikka" + sortMerkki(nameSort)}</th>
-                    <th onClick={() => sortWeatherData(sortWeatherDataTemp, tempSort)}>{"Lämpötila" + sortMerkki(tempSort)}</th>
-                    <th onClick={() => sortWeatherData(sortWeatherDataRain, rainSort)}>{"Sade" + sortMerkki(rainSort)}</th>
-                    <th onClick={() => sortWeatherData(sortWeatherDataWind, windSort)}>{"Tuuli" + sortMerkki(windSort)}</th>
+                    <th onClick={() => sortWeatherData(nameSort)}>{"Paikka" + sortMerkki(nameSort)}</th>
+                    <th onClick={() => sortWeatherData(tempSort)}>{"Lämpötila" + sortMerkki(tempSort)}</th>
+                    <th onClick={() => sortWeatherData(rainSort)}>{"Sade" + sortMerkki(rainSort)}</th>
+                    <th onClick={() => sortWeatherData(windSort)}>{"Tuuli" + sortMerkki(windSort)}</th>
                 </tr>
             );
+            // return (
+            //     <tr>
+            //         <th onClick={() => sortWeatherData(sortWeatherDataName, nameSort)}>{"Paikka" + sortMerkki(nameSort)}</th>
+            //         <th onClick={() => sortWeatherData(sortWeatherDataTemp, tempSort)}>{"Lämpötila" + sortMerkki(tempSort)}</th>
+            //         <th onClick={() => sortWeatherData(sortWeatherDataRain, rainSort)}>{"Sade" + sortMerkki(rainSort)}</th>
+            //         <th onClick={() => sortWeatherData(sortWeatherDataWind, windSort)}>{"Tuuli" + sortMerkki(windSort)}</th>
+            //     </tr>
+            // );
         }
         else {
             return (
@@ -721,33 +805,6 @@ function Map() {
             );
         }
 
-        /** Sorttaa säädatan funktiolla ja tarkastaa tyypin
-         * @param {Function(a,b)} sortFunc Vertailufunktio
-         * @param {String} type Järjestysperusta
-         */
-        function sortWeatherData(sortFunc, type) {
-            if (temps.length < 1) return;
-
-            sortSign = ykSort.dir;
-
-            if (ykSort.type === type) {
-                sortSign = -sortSign;
-                setYkSort({
-                    "type": ykSort.type,
-                    "dir": -ykSort.dir
-                });
-            }
-            else {
-                sortSign = 1;
-                setYkSort({
-                    "type": type,
-                    "dir": 1
-                });
-            }
-
-            setTemps(Array.from(temps).sort(sortFunc));
-        }
-
         /** Palauttaa sopivan merkin näytettäväksi järjestystyypille
          * @param {String} sortType Järjestysperusta jota katsotaan
          */
@@ -755,49 +812,75 @@ function Map() {
             return ykSort.type === sortType ? (ykSort.dir > 0 ? "↑" : "↓") : "";
         }
 
-        /** Vertaa nimen mukaan */
-        function sortWeatherDataName(a, b) {
-            let aName = a.location;
-            let bName = b.location;
+        // /** Sorttaa säädatan funktiolla ja tarkastaa tyypin
+        //  * @param {Function(a,b)} sortFunc Vertailufunktio
+        //  * @param {String} type Järjestysperusta
+        //  */
+        // function sortWeatherData(sortFunc, type) {
+        //     if (temps.length < 1) return;
 
-            // return ykSort.dir * (aName < bName ? -1 : (bName < aName ? 1 : 0));
-            return sortSign * (aName < bName ? -1 : (bName < aName ? 1 : 0));
-        }
+        //     sortSign = ykSort.dir;
 
-        /** Vertaa sateen mukaan */
-        function sortWeatherDataRain(a, b) {
-            console.log(a);
-            let aVal = a.weatherData[Number.parseInt(ykTime)].rain;
-            let bVal = b.weatherData[Number.parseInt(ykTime)].rain;
+        //     if (ykSort.type === type) {
+        //         sortSign = -sortSign;
+        //         setYkSort({
+        //             "type": ykSort.type,
+        //             "dir": -ykSort.dir
+        //         });
+        //     }
+        //     else {
+        //         sortSign = 1;
+        //         setYkSort({
+        //             "type": type,
+        //             "dir": 1
+        //         });
+        //     }
 
-            if (aVal.length < 1) return 1;
-            if (bVal.length < 1) return -1;
+        //     setTemps(Array.from(temps).sort(sortFunc));
+        // }
 
-            return sortSign * (aVal < bVal ? -1 : (bVal < aVal ? 1 : 0));
-        }
+        // /** Vertaa nimen mukaan */
+        // function sortWeatherDataName(a, b) {
+        //     let aName = a.location;
+        //     let bName = b.location;
 
-        /** Vertaa lämpötilan mukaan */
-        function sortWeatherDataTemp(a, b) {
-            let aVal = a.weatherData[ykTime].temp;
-            let bVal = b.weatherData[ykTime].temp;
+        //     // return ykSort.dir * (aName < bName ? -1 : (bName < aName ? 1 : 0));
+        //     return sortSign * (aName < bName ? -1 : (bName < aName ? 1 : 0));
+        // }
 
-            if (aVal.length < 1) return 1;
-            if (bVal.length < 1) return -1;
+        // /** Vertaa sateen mukaan */
+        // function sortWeatherDataRain(a, b) {
+        //     let aVal = a.weatherData[Number.parseInt(ykTime)].rain;
+        //     let bVal = b.weatherData[Number.parseInt(ykTime)].rain;
 
-            return sortSign * (Number.parseFloat(aVal) - Number.parseFloat(bVal));
-            // return sortSign * (aVal < bVal ? -1 : (bVal < aVal ? 1 : 0));
-        }
+        //     if (aVal.length < 1) return 1;
+        //     if (bVal.length < 1) return -1;
 
-        /** Vertaa tuulen mukaan */
-        function sortWeatherDataWind(a, b) {
-            let aVal = a.weatherData[Number.parseInt(ykTime)].wind;
-            let bVal = b.weatherData[Number.parseInt(ykTime)].wind;
+        //     return sortSign * (aVal < bVal ? -1 : (bVal < aVal ? 1 : 0));
+        // }
 
-            if (aVal.length < 1) return 1;
-            if (bVal.length < 1) return -1;
+        // /** Vertaa lämpötilan mukaan */
+        // function sortWeatherDataTemp(a, b) {
+        //     let aVal = a.weatherData[ykTime].temp;
+        //     let bVal = b.weatherData[ykTime].temp;
 
-            return sortSign * (aVal < bVal ? -1 : (bVal < aVal ? 1 : 0));
-        }
+        //     if (aVal.length < 1) return 1;
+        //     if (bVal.length < 1) return -1;
+
+        //     return sortSign * (Number.parseFloat(aVal) - Number.parseFloat(bVal));
+        //     // return sortSign * (aVal < bVal ? -1 : (bVal < aVal ? 1 : 0));
+        // }
+
+        // /** Vertaa tuulen mukaan */
+        // function sortWeatherDataWind(a, b) {
+        //     let aVal = a.weatherData[Number.parseInt(ykTime)].wind;
+        //     let bVal = b.weatherData[Number.parseInt(ykTime)].wind;
+
+        //     if (aVal.length < 1) return 1;
+        //     if (bVal.length < 1) return -1;
+
+        //     return sortSign * (aVal < bVal ? -1 : (bVal < aVal ? 1 : 0));
+        // }
     }
 
     /**Palauttaa rivit säätableen */
@@ -818,13 +901,13 @@ function Map() {
                         {/* <td>
                             {timedData.time}
                         </td> */}
-                        <td className = {cellClass}>
+                        <td className={cellClass}>
                             {(timedData.temp && timedData.temp.length > 0) ? (timedData.temp + "°C") : "-"}
                         </td>
-                        <td className = {cellClass}>
+                        <td className={cellClass}>
                             {(timedData.rain && timedData.rain.length > 0) ? (timedData.rain + " mm") : "-"}
                         </td>
-                        <td className = {cellClass}>
+                        <td className={cellClass}>
                             {(timedData.wind && timedData.wind.length > 0) ? (timedData.wind + " m/s") : "-"}
                         </td>
                     </tr>
@@ -836,7 +919,7 @@ function Map() {
                 function (item) {
                     let cellClass = item.isForecast ? "forecastCell" : "observedCell";
                     return (
-                        <tr key={"weather_map_data_row_" + key++} className = {cellClass}>
+                        <tr key={"weather_map_data_row_" + key++} className={cellClass}>
                             <td>
                                 {item.time}
                             </td>
@@ -932,6 +1015,19 @@ function Map() {
         }
     }
 
+    /** Palauttaa aikainputin jos yleiskatsaus valittuna */
+    function ykTimeInput() {
+        if (selectedLocation === yk) {
+            return (
+                <input type="time" step="3600000" value={"" + (ykTime > 9 ? "" : "0") + ykTime + ":00"} onChange={handleInput.bind(null, "ykTime")} />
+            );
+        }
+
+        return undefined;
+    }
+
+    //#endregion
+
     return (
         <div className='App' id="mapDiv">
             <h1>Map</h1>
@@ -970,6 +1066,7 @@ function Map() {
                         <td id="mapInfoCell">
                             <h2>{selectedLocation}<br />{inputDate} {selectedLocation === yk && ("klo " + ykTime)}</h2>
                             <button onClick={getWeather} disabled={!allowSearch || searchError.length > 0}>Hae sää</button>
+                            {ykTimeInput()}
                             <div className="error">{searchError}</div>
                             <table id="weatherInfoTable">
                                 <tbody>
