@@ -284,8 +284,8 @@ function Home() {
     var SERVER_URL = "http://opendata.fmi.fi/wfs";
     var STORED_QUERY_OBSERVATION = "fmi::observations::weather::multipointcoverage";
     var parser = new Metolib.WfsRequestParser();
-    let dateParts = inputDate.split('/').map(Number);
-    let pvm = new Date(dateParts[2], dateParts[1]-1, dateParts[0], 0, 0, 0);
+    let dateParts = inputDate.split('-').map(Number);
+    let pvm = new Date(dateParts[0], dateParts[1]-1, dateParts[2], 0, 0, 0);
     let uusiEnd = new Date(pvm.getTime() + 604800000);
     parser.getData({
     url : SERVER_URL,
@@ -368,8 +368,7 @@ function Home() {
   }
 
   function forecastMaxWeather(pvmHelper) {
-    let dateParts = inputDate.split('/').map(Number);
-    let dateString = dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0];
+    let dateString = inputDate;
     let dateId = forecast[dateString].id;
     let keys = Object.keys(forecast);
     let maxAr = [];
@@ -403,8 +402,8 @@ function Home() {
     var SERVER_URL = "http://opendata.fmi.fi/wfs";
     var STORED_QUERY_OBSERVATION = "fmi::observations::weather::multipointcoverage";
     var parser = new Metolib.WfsRequestParser();
-    let dateParts = inputDate.split('/').map(Number);
-    let pvm = new Date(dateParts[2], dateParts[1]-1, dateParts[0], 0, 0, 0);
+    let dateParts = inputDate.split('-').map(Number);
+    let pvm = new Date(dateParts[0], dateParts[1]-1, dateParts[2], 0, 0, 0);
     let uusiEnd = new Date(pvm.getTime() + 604800000);
     parser.getData({
       url : SERVER_URL,
@@ -464,8 +463,7 @@ function Home() {
 
   //Funktio ennustuksien näyttämiseen
   function rainAndWindForecast() {
-    let dateParts = inputDate.split('/').map(Number);
-    let dateString = dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0];
+    let dateString = inputDate;
     let dateId = forecast[dateString].id;
     let keys = Object.keys(forecast);
     let maxWindAr = [];
@@ -558,6 +556,10 @@ function Home() {
   //Käsitellään hakunapin painallus
   const handleClick = (event) => {
     event.preventDefault();
+    if (inputDate === "" || inputCity === "") {
+      setWarning("Tarkista hakuehdot!");
+      return;
+    }
     getData();
     getWindAndRainData();
   }
@@ -571,7 +573,7 @@ function Home() {
   return (
     <div className="App">
       <Dropdown className="dropDown" options={options} onChange={onSelect} value={inputCity} placeholder="Valitse kaupunki"/>
-      <input className="date" value={inputDate} onChange={handleInputDate} placeholder="pp/kk/vvvv" />
+      <input className="date" type="date" value={inputDate} onChange={handleInputDate} placeholder="pp/kk/vvvv" />
       <br/> 
       <button onClick={handleClick}>Hae tiedot</button>
       <h3>{warning}</h3>
@@ -581,7 +583,7 @@ function Home() {
           {maxTemperatures.map((item, index) => (
             <div key={index + "div"} className="temp">
               <header key={index + "time"} className="time">{item[0]}</header>
-              <div key={index + "t"} className="t">{item[1]}</div>
+              <div key={index + "t"} className="t">{item[1]}°C</div>
             </div>
           ))}
         </div>
@@ -608,7 +610,7 @@ function Home() {
           {maxForecast.map((item, index) => (
               <div key={index + "div"} className="temp">
                 <header key={index + "time"} className="time">{item[0]}</header>
-                <div key={index + "t"} className="t">{item[1]}</div>
+                <div key={index + "t"} className="t">{item[1]}°C</div>
               </div>
             ))}
         </div>

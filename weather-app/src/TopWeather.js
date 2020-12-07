@@ -13,15 +13,21 @@ function TopWeather() {
     const [windPlace, setWindPlace] = useState("");
     const [maxRain, setMaxRain] = useState(0);
     const [rainPlace, setRainPlace] = useState("");
+    const [warning, setWarning] = useState("");
 
     //Haetaan tietylle päivälle kaikkien kaupunkien data
     function getData() {
+        console.log(inputDate);
         var SERVER_URL = "http://opendata.fmi.fi/wfs";
         var STORED_QUERY_OBSERVATION = "fmi::observations::weather::cities::multipointcoverage";
         var parser = new Metolib.WfsRequestParser();
-        let dateParts = inputDate.split('/').map(Number);
-        let start = new Date(dateParts[2], dateParts[1]-1, dateParts[0], 0, 0, 0);
-        let end = new Date(dateParts[2], dateParts[1]-1, dateParts[0], 23, 0, 0);
+        if (inputDate === "") {
+            setWarning("Tarkista hakuehdot!");
+            return;
+        }
+        let dateParts = inputDate.split('-').map(Number);
+        let start = new Date(dateParts[0], dateParts[1]-1, dateParts[2], 0, 0, 0);
+        let end = new Date(dateParts[0], dateParts[1]-1, dateParts[2], 23, 0, 0);
         parser.getData({
             url : SERVER_URL,
             storedQueryId: STORED_QUERY_OBSERVATION,
@@ -132,8 +138,9 @@ function TopWeather() {
     return (
         <div className='App'>
             <h1>Päivän kohokohdat</h1>
-            <input value={inputDate} onChange={handleInputDate} placeholder="pp/kk/vvvv" />
+            <input value={inputDate} type="date" onChange={handleInputDate} placeholder="pp/kk/vvvv" />
             <button onClick={handleClick}>Hae tiedot</button>
+            <h3>{warning}</h3>
             <div id='dayTop'>
                 <div className='topinfo'>
                     <div>
