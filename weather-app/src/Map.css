@@ -1,0 +1,46 @@
+/* Kartta */
+
+.leaflet-container {
+  width: 100%;
+  height: 55vh;
+}
+
+#baseTable{
+  width: 100%;
+}
+
+#baseTable table, tbody, tr{
+  width: 100%;
+}
+
+#mapCell {
+  vertical-align: top;
+} 
+
+#mapInfoCell {
+  width: min(20em, 35vw);
+  vertical-align: top;
+}
+
+.error {
+  color: red;
+}
+
+#weatherInfoTable td, th{
+  text-align: left;
+  border-collapse: collapse;
+}
+
+.leftAlign {
+  text-align: left;
+}
+
+.forecastCell {
+  background-color: #e7f2ff;
+  text-align: left;
+}
+
+.observedCell {
+  background-color: #d8d8d8;
+  text-align: left;
+}

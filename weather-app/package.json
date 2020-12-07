@@ -10,9 +10,11 @@
     "@testing-library/user-event": "^7.2.1",
     "axios": "^0.21.0",
     "d3": "^6.2.0",
+    "leaflet": "^1.7.1",
     "react": "^16.14.0",
     "react-dom": "^16.14.0",
     "react-dropdown": "^1.9.0",
+    "react-leaflet": "^2.7",
     "react-scripts": "^3.4.4"
   },
   "scripts": {
