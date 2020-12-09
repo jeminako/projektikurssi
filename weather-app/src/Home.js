@@ -502,8 +502,11 @@ function Home() {
       }
       let amount = 0;
       for (let k = 0; k<24; k++) {
-        if (!isNaN(parseFloat(data[k]))) {
-          amount += parseFloat(data[k])
+        let rain = parseFloat(data[k])
+        if (!isNaN(rain)) {
+          if (rain > amount) {
+            amount = rain;
+          }
         }
       }
       rainAmount.push(amount);
@@ -519,10 +522,9 @@ function Home() {
       let amount = 0;
       for (j; j<limit; j++) {
         let rain = rainAr[j];
-        if (isNaN(rain)) {
-          rain = 0;
+        if (!isNaN(rain)) {
+          amount += rain;
         }
-        amount += rain;
       }
       rainAmount.push(amount);
       limit += 24;
