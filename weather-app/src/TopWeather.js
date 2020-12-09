@@ -17,7 +17,6 @@ function TopWeather() {
 
     //Haetaan tietylle päivälle kaikkien kaupunkien data
     function getData() {
-        console.log(inputDate);
         var SERVER_URL = "http://opendata.fmi.fi/wfs";
         var STORED_QUERY_OBSERVATION = "fmi::observations::weather::cities::multipointcoverage";
         var parser = new Metolib.WfsRequestParser();
@@ -55,10 +54,11 @@ function TopWeather() {
         }
     }
 
+    //Etsitään suurin sademäärä
     function findMaxRain(data) {
         let maxRainAmount = 0;
         let maxCity = "";
-        for (let i = 0; i<75; i++) {
+        for (let i = 0; i<data.locations.length; i++) {
             let hours = data.locations[i].data.r_1h.timeValuePairs;
             let city = data.locations[i].info.region;
             let rainAmount = 0;
@@ -77,10 +77,11 @@ function TopWeather() {
         setMaxRain(Math.round(maxRainAmount * 10) / 10);
     }
 
+    //Etsitään nopein tuulennopeus
     function findMaxWind(data) {
         let maxWindSpeed = 0;
         let maxCity = "";
-        for (let i = 0; i<75; i++) {
+        for (let i = 0; i<data.locations.length; i++) {
             let hours = data.locations[i].data.ws_10min.timeValuePairs;
             let city = data.locations[i].info.region;
             for (const hour of hours) {
@@ -97,12 +98,13 @@ function TopWeather() {
         setMaxWind(maxWindSpeed);
     }
 
+    //Etsitään suurin ja pienin lämpötila
     function findMaxAndMinTemp(data) {
-        let maxTemp = Number.MIN_VALUE;
-        let minTemp = Number.MAX_VALUE;
+        let maxTemp = -100;
+        let minTemp = 100;
         let maxPlace = "";
         let minPlace = "";
-        for (let i = 0;  i<75; i++) {
+        for (let i = 0;  i<data.locations.length; i++) {
             let hours = data.locations[i].data.t2m.timeValuePairs;
             let city = data.locations[i].info.region;
             for (const hour of hours) {
