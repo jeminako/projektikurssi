@@ -58,8 +58,8 @@ function OurForecast() {
         var SERVER_URL = "http://opendata.fmi.fi/wfs";
         var STORED_QUERY_OBSERVATION = "fmi::observations::weather::multipointcoverage";
         var parser = new Metolib.WfsRequestParser();
-        let dateParts = inputDate.split('/').map(Number);
-        let pvm = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], 0, 0, 0);
+
+        let pvm = inputDateToDate(inputDate);
         let uusiEnd = new Date(pvm.getTime() + 604800000);
         parser.getData({
             url: SERVER_URL,
@@ -126,7 +126,7 @@ function OurForecast() {
 
     //Käsitellään ja asetetaan haettu lämpötiladata. Jos virheitä, näytetään varoitusviesti.
     function handleData(data, errors) {
-        console.log(data);
+        //console.log(data);
         let tempDay = [];
         if (errors.length === 0) {
             for (const pair of data.locations[0].data.temperature.timeValuePairs) {
@@ -174,19 +174,19 @@ function OurForecast() {
     }
 
     function laskeDelta() {
-        
+
     }
 
-    // Haetaan vanhat ennusteet
-    useEffect(() => {
-        fetch('/api').then(response => {
-            if (response.ok) {
-                return response.json()
-            } else {
-                console.log('Virhe JSON-datan haussa.')
-            }
-        }).then(data => setForecast(data))
-    }, [])
+    // // Haetaan vanhat ennusteet
+    // useEffect(() => {
+    //     fetch('/api').then(response => {
+    //         if (response.ok) {
+    //             return response.json()
+    //         } else {
+    //             console.log('Virhe JSON-datan haussa.')
+    //         }
+    //     }).then(data => setForecast(data))
+    // }, [])
 
     //Asetetaan valittu kaupunki
     const onSelect = (event) => {
@@ -221,20 +221,28 @@ function OurForecast() {
 
     const element = React.createElement(
         'h1',
-        {className: 'greeting'},
+        { className: 'greeting' },
         'Hello, world!'
-      );
+    );
+
+    /** Muuttaa date-inputista saatavan jonon (YYYY-MM-DD) Dateksi
+    * @param {String} inputValue Inputti muodossa YYYY-MM-DD
+    */
+    function inputDateToDate(inputValue) {
+        let dateParts = inputValue.split('-').map(Number);
+        return new Date(dateParts[0], dateParts[1] - 1, dateParts[2], 0, 0, 0);
+    }
 
     return (
         <div className='App'>
             <Dropdown className="dropDown" options={options} onChange={onSelect} value={inputCity} placeholder="Valitse kaupunki" />
-            <input className="date" value={inputDate} onChange={handleInputDate} placeholder="pp/kk/vvvv" />
+            <input className="date" type='date' value={inputDate} onChange={handleInputDate} placeholder="pp/kk/vvvv" />
             <br />
             <button onClick={handleClick}>Hae tiedot</button>
 
             <div className="weatherData">
-            <h2>Ennusteet</h2>
-            <div className="weatherBar">
+                <h2>Ennusteet</h2>
+                <div className="weatherBar">
                     {maxTemperatures.map((item, index) => (
 
                         <div key={index + "div"} className="temp">
@@ -245,30 +253,30 @@ function OurForecast() {
                 </div>
 
                 <h2>Delta</h2>
-                
+
                 <div className="lampotilaDelta">
                     {maxTemperatures.map((item, index) => (
 
                         <div key={index + "div"} className="temp">
                             <header key={index + "time"} className="time">{item[0]}</header>
-                            <div style = {{color: 'green'}} key={index + "t"} className="t">{'±' + (item[1] - item[1]).toString()}</div>
-                            
+                            <div style={{ color: 'green' }} key={index + "t"} className="t">{'±' + (item[1] - item[1]).toString()}</div>
+
                         </div>
                     ))}
                 </div>
 
-            <h2>Toteutuneet max lämpötilat</h2>
+                <h2>Toteutuneet max lämpötilat</h2>
                 <div className="weatherBar">
-                    const {maxTemperatures.map((item, index) => (
+                    {maxTemperatures.map((item, index) => (
 
-                        <div key={index + "div"} className="temp">
-                            <header key={index + "time"} className="time">{item[0]}</header>
-                            <div key={index + "t"} className="t">{item[1]}</div>
-                        </div>
-                    ))}
+                    <div key={index + "div"} className="temp">
+                        <header key={index + "time"} className="time">{item[0]}</header>
+                        <div key={index + "t"} className="t">{item[1]}</div>
+                    </div>
+                ))}
 
                 </div>
-                    
+
             </div>
             <h1>Our Forecast (demo)</h1>
             <p>Eli tänne voi tehdä sen sivun, jossa käyttäjä voi hakea ennusteen tiettyyn kaupunkiin,
