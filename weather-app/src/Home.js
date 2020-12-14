@@ -580,7 +580,7 @@ function Home() {
       <button onClick={handleClick}>Hae tiedot</button>
       <h3>{warning}</h3>
       <div className="weatherData">
-        <header>SÄÄ</header>
+        <header>SÄÄHAVAINNOT</header>
         <div className="weatherBar">
           {maxTemperatures.map((item, index) => (
             <div key={index + "div"} className="temp">
@@ -607,7 +607,7 @@ function Home() {
         </div>
       </div>
       <div className="weatherData">
-        <header>ENNUSTE</header>
+        <header>SÄÄENNUSTE</header>
         <div className="weatherBar">
           {maxForecast.map((item, index) => (
               <div key={index + "div"} className="temp">
@@ -622,14 +622,14 @@ function Home() {
               <g className="x-axis" />
               <g className="y-axis" />
             </svg>
-            <p>Ennustus</p>
+            <p>Tuulennopeuksien maksimit</p>
           </div>
           <div>
             <svg ref={svgRefRainForecast}>
               <g className="x-axis" />
               <g className="y-axis" />
             </svg>
-            <p>Ennustus</p>
+            <p>Päivittäiset sademäärät</p>
           </div>
         </div>
       </div>

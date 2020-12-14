@@ -384,7 +384,7 @@ function OurForecast() {
             <button onClick={handleClick}>Hae tiedot</button>
 
             <div className="weatherData">
-                <h2>Toteutuneet max lämpötilat</h2>
+                <h2>Toteutuneet säähavainnot</h2>
                 <div className="weatherBar">
                     {
                         maxTemperatures.map((item, index) => (
@@ -397,7 +397,7 @@ function OurForecast() {
                 </div>
 
 
-                <h2>Ennusteet</h2>
+                <h2>Sääennusteet</h2>
                 <div className="weatherBar">
                     {maxEnnusteet.map((item, index) => (
 
@@ -409,26 +409,6 @@ function OurForecast() {
 
                 </div>
                 <h2>Viikon keskimääräinen virhe oli: {viikonDelta}</h2>
-                
-
-                {/* <div className="lampotilaDelta">
-                    
-                    {deltat.map((item, index) => (
-
-                        <div key={index + "div"} className="temp">
-                            <header key={index + "time"} className="time">{item[0]}</header>
-                            <div key={index + "t"} className="t">{(item[1]).toString()}</div>
-
-                        </div>
-                    ))}
-                </div> */}
-{/* 
-                <h2>Line chart</h2>
-                <div className='lineChart'>
-                    <button onClick={regenerateData}>laskeLineChart()</button>
-                    <LineChart data={lineData} width={400} height={300} />
-                </div> */}
-
             </div>
             <h1>Meidän ennuste (demo)</h1>
             <p>Ennusteet edeltävän viikon keskivirhe mukaan laskien:
@@ -443,7 +423,7 @@ function OurForecast() {
                         </div>
                     ))}
 
-                </div>
+            </div>
         </div>
 
     );
