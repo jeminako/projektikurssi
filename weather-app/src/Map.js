@@ -170,6 +170,12 @@ function Map() {
         }
     );
 
+    /**
+     * Parametrit säähakuun. 
+     * - propertyName voi olla mikä vain
+     * - observationParam on havaintohaun parametri
+     * - forecastParam on ennustehaun parametri. "" tarkoittaa että ennnustetta ei haeta tähän
+     */
     const weathergetParams = [
         {
             "visName": "Lämpötila",
@@ -378,14 +384,14 @@ function Map() {
             dataCell.time = "" + dateTime.getHours();
             if (dataCell.time.length < 2) dataCell.time = "0" + dataCell.time;
             //Lämpö
-            dataCell.temp = Number.isNaN(tp.value) ? "" : ("" + tp.value);
+            dataCell.temp = Number.isNaN(tp.value) ? "" : ("" + roundToDecimals(tp.value,1));
 
             for (let pi = 1; pi < weathergetParams.length; pi++) {
                 let p = weathergetParams[pi];
                 let param = isForecast ? p.forecastParam : p.observationParam;
                 if (param.length > 1) {
                     let valuePair = locationData[param].timeValuePairs[i];
-                    dataCell[p.propertyName] = Number.isNaN(valuePair.value) ? "" : ("" + valuePair.value);
+                    dataCell[p.propertyName] = Number.isNaN(valuePair.value) ? "" : ("" + roundToDecimals(valuePair.value,1));
                 }
             }
 
@@ -516,6 +522,11 @@ function Map() {
 
     /** Suorittaa tekstihaun nominativesta ja asetttaa tiedot jos haku onnistuu */
     function textSearch() {
+        if (inputCity.trim() === selectedLocation.trim()) {
+            //Sama paikka
+            return;
+        }
+
         if (searchCooldown()) {
             console.log("Liian nopeita hakuja!");
             return;
@@ -524,6 +535,7 @@ function Map() {
         setSearchError("");
 
         if (inputCity.trim().length < 1) {
+            //Tyhjä syöte
             setSearchError("Ei syötettä");
             return;
         }
@@ -546,6 +558,8 @@ function Map() {
 
                     //Valitse eka
                     let result = data[0];
+
+                    //TODO: Tallenna dictionaryyn, hae sieltä aina eka jos löytyy samalla hakusanalla, ota se
 
                     //Aseta sijainti ja paikka
                     let coords = [result.lat, result.lon];
