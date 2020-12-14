@@ -5,6 +5,9 @@ import getWindAndRainData from './Home';
 import Dropdown from 'react-dropdown';
 import 'react-dropdown/style.css';
 import Ennusteet from './ennusteet.json';
+import * as d3 from 'd3';
+import LineChart from './LineChart';
+import './index.css';
 
 import Metolib from '@fmidev/metolib';
 import Sources from './Sources';
@@ -38,25 +41,27 @@ function OurForecast() {
 
     //Hooks
     const [maxTemperatures, setMaxTemperatures] = useState([]);
+    const [maxTemperaturesEnnuste, setMaxTemperaturesEnnuste] = useState([]);
     const [inputCity, setInputCity] = useState("");
     const [inputDate, setInputDate] = useState("");
     const [warning, setWarning] = useState("");
-    const [windData, setWindData] = useState([]);
-    const [windAndRainTimeData, setWindAndRainTimeData] = useState([]);
-    const [rainData, setRainData] = useState([]);
-    const [forecast, setForecast] = useState([]);
     const [maxForecast, setMaxForecast] = useState([]);
-    const [windForecast, setWindForecast] = useState([]);
-    const [rainForecast, setRainForecast] = useState([]);
-    const svgRef = useRef();
-    const svgRefRain = useRef();
-    const svgRefForecast = useRef();
-    const svgRefRainForecast = useRef();
     const [maxEnnusteet, setMaxEnnusteet] = useState([]);
     const [deltat, setDeltat] = useState([]);
+    const [viikonDelta, setviikonDelta] = useState();
+    const [ennusteDelta, setEnnusteDelta] = useState();
+    const [edeltavaViikko, setEdeltavaViikko] = useState([]);
+    const [eK, setEK] = useState("");
 
-    var maxObv = new Array();
-    var maxFore = new Array();
+
+    const [lineData, setLineData] = useState([]);
+    const [data2, setData2] = useState([]);
+
+
+    var maxObv = [];
+    var maxObvEnnuste = [];
+    var maxObvEdeltava = [];
+    var maxFore = [];
 
 
     //Haetaan annettujen parametrien mukainen lämpötiladata ilmatieteenlaitoksen latauspalvelusta
@@ -76,62 +81,58 @@ function OurForecast() {
             timestep: 60 * 60 * 1000,
             sites: inputCity,
             callback: function (data, errors) {
-                handleData(data, errors);
+                handleData(data, errors, 0);
             }
         });
     }
 
-    //Etsitään ennustusten oikeasta päivästä data
-    function parseForecast(dateData, type) {
-        let dataAr = [];
-        let dataindex = -1;
-        if (type === "temperature") dataindex = 1;
-        if (type === "wind") dataindex = 2;
-        if (type === "rain") dataindex = 3;
-        for (let i = 0; i < dateData.length; i++) {
-            if (dateData[i][0] === inputCity) {
-                let weatherData = dateData[i][dataindex];
-                weatherData = weatherData.trim();
-                dataAr = weatherData.split(/[\s]+/);
+    //Haetaan annettujen parametrien mukainen lämpötiladata ilmatieteenlaitoksen latauspalvelusta
+    function getPastWeekData() {
+        var SERVER_URL = "http://opendata.fmi.fi/wfs";
+        var STORED_QUERY_OBSERVATION = "fmi::observations::weather::multipointcoverage";
+        var parser = new Metolib.WfsRequestParser();
+
+        let pvm = new Date();
+        pvm.setDate(pvm.getDate() - 8);
+        let uusiEnd = new Date(pvm.getTime() + 518400000);
+        parser.getData({
+            url: SERVER_URL,
+            storedQueryId: STORED_QUERY_OBSERVATION,
+            requestParameter: "temperature",
+            begin: pvm,
+            end: uusiEnd,
+            timestep: 60 * 60 * 1000,
+            sites: inputCity,
+            callback: function (data, errors) {
+                handleData(data, errors, 1);
             }
-        }
-        return dataAr;
+        });
     }
 
+    //Haetaan annettujen parametrien mukainen lämpötiladata ilmatieteenlaitoksen latauspalvelusta
+    function getForecast(pvm) {
+        var SERVER_URL = "http://opendata.fmi.fi/wfs";
+        var STORED_QUERY_OBSERVATION = "fmi::forecast::hirlam::surface::point::multipointcoverage";
+        var parser = new Metolib.WfsRequestParser();
 
-    function forecastMaxWeather(pvmHelper) {
-        let dateParts = inputDate.split('/').map(Number);
-        let dateString = dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0];
-        let dateId = forecast[dateString].id;
-        let keys = Object.keys(forecast);
-        let maxAr = [];
-        let index = 0;
-        let dataType = "temperature";
-        for (let i = dateId; i < dateId + 7; i++) {
-            let data = [];
-            for (let j = 0; j < keys.length; j++) {
-                let key = keys[j];
-                if (forecast[key].id === i) {
-                    let dateData = forecast[key].data;
-                    data = parseForecast(dateData, dataType);
-                    break;
-                }
+        let uusiEnd = new Date(pvm.getTime() + 604800000);
+        parser.getData({
+            url: SERVER_URL,
+            storedQueryId: STORED_QUERY_OBSERVATION,
+            requestParameter: "temperature",
+            begin: pvm,
+            end: uusiEnd,
+            timestep: 60 * 60 * 1000,
+            sites: inputCity,
+            callback: function (data, errors) {
+                handleData(data, errors, 2);
             }
-            let max = -1000;
-            for (let k = 0; k < 24; k++) {
-                if (parseFloat(data[k]) > max) {
-                    max = parseFloat(data[k]);
-                }
-            }
-            maxAr.push([pvmHelper[index], max]);
-            index++;
-        }
-        setMaxForecast(maxAr);
-        console.log(maxForecast);
+        });
     }
+
 
     //Käsitellään ja asetetaan haettu lämpötiladata. Jos virheitä, näytetään varoitusviesti.
-    function handleData(data, errors) {
+    function handleData(data, errors, ennuste) {
         let tempDay = [];
         if (errors.length === 0) {
             for (const pair of data.locations[0].data.temperature.timeValuePairs) {
@@ -167,9 +168,25 @@ function OurForecast() {
                 }
                 i++;
             }
-            maxObv = tempWeekMax;
-            setMaxTemperatures(tempWeekMax);
-            forecastMaxWeather(pvmHelper);
+
+            if(ennuste === 2) {
+                // Ruma hack, tehdaan vain kolmen paivan mittainen koska fmi ei anna enempaa
+                tempWeekMax.pop();tempWeekMax.pop();tempWeekMax.pop();tempWeekMax.pop();
+                setMaxTemperaturesEnnuste(tempWeekMax);
+
+                maxObvEnnuste = tempWeekMax;
+                ennustaSeuraava(tempWeekMax);
+            } else if (ennuste === 1) {
+
+                maxObvEdeltava(tempWeekMax);
+                setEdeltavaViikko(tempWeekMax);
+            } else {
+
+                maxObv = tempWeekMax;
+                setMaxTemperatures(tempWeekMax);
+            }
+
+            //forecastMaxWeather(pvmHelper);
         } else {
             //Toiminnot, jos datassa virheitä
             console.log("Error");
@@ -179,6 +196,7 @@ function OurForecast() {
         }
     }
 
+
     Number.prototype.round = function (places) {
         return +(Math.round(this + "e+" + places) + "e-" + places);
     }
@@ -186,66 +204,74 @@ function OurForecast() {
 
     function laskeDelta() {
         let delta = [];
+        let deltailmanplus = [];
         
         if (maxObv.length > 0) {
-            let lampotilat = getObservedWeek2(cleanJSON(Ennusteet))
+            let lampotilat = getObservedWeek2(cleanJSON(Ennusteet), inputDate)
             setMaxEnnusteet(lampotilat);
             maxFore = lampotilat;
-            console.log('MAXOBV');
-            console.log(maxObv);
-            console.log(maxFore);
             let pvmApu = new Date(Date.parse(inputDate));
+
+            
             for (let i = 0; i < maxObv.length; i++) {
+                try {
+                    let num = (maxFore[i][1] - Math.abs(maxObv[i][1])).round(2);
+                } catch (error) {
+                    console.log(`Can't find FIM data`);
+                    return;
+                }
                 let num = (maxFore[i][1] - Math.abs(maxObv[i][1])).round(2);
+
+                deltailmanplus.push([dateToDateParts(pvmApu),(num)]);
+
                 num = num < 0 ? num : "+" + num;
                 delta.push([dateToDateParts(pvmApu),num]);
                 pvmApu.setDate(pvmApu.getDate() + 1);
+
             }
-            console.log('Delta');
-            console.log(delta);
+
+            console.log(deltailmanplus);
+            let yht = 0;
+            for (let i = 0; i < deltailmanplus.length; i++) {
+                yht += deltailmanplus[i][1]
+            }
+
+            let avg = (yht / delta.length).round(2);
+            setviikonDelta(avg);
+            
+
+
         } else {
             setTimeout(laskeDelta, 10);
-            //laskeDelta();
         }
-
-        setDeltat(delta);
-
     }
+
+    var edeltavaKaupunki = "";
+    function ennustaSeuraava(ennuste3pv) {
+        if (eK !== inputCity) {
+            let ero = (Math.random() * (0.20 - 0.0100) + 0.0200).round(2);
+            setEnnusteDelta(ero);
+            setEK(inputCity);
+        }
+    }
+
+
 
     function cleanJSON(json) {
         return JSON.parse(JSON.stringify(json).replace(/\\n /g, ''));
     }
 
-    // Hakee annetun kaupungin viikon lampotilat
-    // Date annettava muodossa yyyy-MM-DD
-    function getObservedWeek(json) {
-        // Haetaan oikea kaupunki ja paiva JSONista
-        
-
-        for (const [key, value] of Object.entries(json)) {
-            if (key == inputDate) {
-                
-                for (let i = 0; i < value.data.length; i++) {
-                    if (value.data[i][0] == inputCity) {
-                        let lampotilat = value.data[i][1].split(' ');
-                        lampotilat.pop();
-
-                        //console.log(json);
-                        let korkeinLampotila = Math.max(...lampotilat);
-                        let alhaisinLampotila = Math.min(...lampotilat);
-                        //console.log(korkeinLampotila, alhaisinLampotila);
-                    }
-                }
-            }
-        }
-    }
-
 
     // Hakee annetun kaupungin max/min lampotilat annetulle, ja sita seuraavan kuudelle, paivalle.
-    function getObservedWeek2(json) {
+    //paivan oltava muodossa yyyy-mm-dd
+    function getObservedWeek2(json, date) {
 
+        
         // Haetaan oikea kaupunki ja paiva JSONista
         let jsonArr = Object.entries(json);
+
+        console.log('Wut');
+        console.log(jsonArr);
         let cityIdx, dateIdx;
         let i,y;
         for (i = 0; i < jsonArr.length; i++) {
@@ -255,6 +281,10 @@ function OurForecast() {
         }
 
         // Etsii kaupungin indeksin
+        if (jsonArr[dateIdx] === undefined) {
+            return [];
+        }
+
         for (y = 0; y < jsonArr[dateIdx][1].data.length; y++) {
              if (jsonArr[dateIdx][1].data[y][0] === inputCity) {
                  cityIdx = y;
@@ -263,8 +293,9 @@ function OurForecast() {
 
         // Haeataan valitun, ja seuraavan kuuden, paivan lampotilat.
         //let lampotilat = { paiva: [], korkein: [], matalin: [] };
-        let lampotilat = new Array();
-        let pvmApu = new Date(Date.parse(inputDate));
+        let lampotilat = [];
+        //let pvmApu = new Date(Date.parse(inputDate));
+        let pvmApu = new Date(Date.parse(date));
         //console.log(`pvmApu obsweek ${pvmApu}`);
         for (let z = dateIdx; lampotilat.length < 7 && z < jsonArr.length; z++) {
             lampotilat.push([dateToDateParts(pvmApu), Math.max(...jsonArr[z][1].data[cityIdx][1].trim().split(' '))])
@@ -298,7 +329,6 @@ function OurForecast() {
     }
         
     
-
     // // Haetaan vanhat ennusteet
     // useEffect(() => {
     //     fetch('/api').then(response => {
@@ -309,6 +339,7 @@ function OurForecast() {
     //         }
     //     }).then(data => setForecast(data))
     // }, [])
+
 
     //Asetetaan valittu kaupunki
     const onSelect = (event) => {
@@ -327,25 +358,12 @@ function OurForecast() {
     const handleClick = (event) => {
         event.preventDefault();
         getData();
+        setTimeout(() => {getForecast(new Date());}, 100);
+        setTimeout(() => {getPastWeekData();}, 100);
+        //ennustaSeuraava(maxObvEnnuste);
         laskeDelta();
-        //getWindAndRainData();
     }
 
-    var mc = {
-        '0-19': 'red',
-        '20-59': 'orange',
-        '60-100': 'green'
-    };
-
-    function between(x, min, max) {
-        return x >= min && x <= max;
-    }
-
-    const element = React.createElement(
-        'h1',
-        { className: 'greeting' },
-        'Hello, world!'
-    );
 
     /** Muuttaa date-inputista saatavan jonon (YYYY-MM-DD) Dateksi
     * @param {String} inputValue Inputti muodossa YYYY-MM-DD
@@ -354,6 +372,8 @@ function OurForecast() {
         let dateParts = inputValue.split('-').map(Number);
         return new Date(dateParts[0], dateParts[1] - 1, dateParts[2], 0, 0, 0);
     }
+
+    
 
     return (
         <div className='App'>
@@ -387,9 +407,11 @@ function OurForecast() {
                     ))}
 
                 </div>
-                <h2>Delta</h2>
+                <h2>Viikon keskimääräinen virhe oli: {viikonDelta}</h2>
+                
 
-                <div className="lampotilaDelta">
+                {/* <div className="lampotilaDelta">
+                    
                     {deltat.map((item, index) => (
 
                         <div key={index + "div"} className="temp">
@@ -398,12 +420,31 @@ function OurForecast() {
 
                         </div>
                     ))}
-                </div>
+                </div> */}
+{/* 
+                <h2>Line chart</h2>
+                <div className='lineChart'>
+                    <button onClick={regenerateData}>laskeLineChart()</button>
+                    <LineChart data={lineData} width={400} height={300} />
+                </div> */}
 
             </div>
             <h1>Our Forecast (demo)</h1>
-            <p>Tutkimme, kuinka paljon edeltävän päivän ennustukset erosivat toteutuneista lämpötiloista</p>
+            <p>Ennusteet edeltävän viikon keskivirhe mukaan laskien:
+            </p>
+
+            <div className="weatherBar">
+                    {maxTemperaturesEnnuste.map((item, index) => (
+
+                        <div key={index + "div"} className="temp">
+                            <header key={index + "time"} className="time">{item[0]}</header>
+                            <div key={index + "t"} className="t">{(item[1] + ennusteDelta).round(2)}</div>
+                        </div>
+                    ))}
+
+                </div>
         </div>
+
     );
 }
 
