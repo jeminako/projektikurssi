@@ -170,8 +170,9 @@ function OurForecast() {
             }
 
             if(ennuste === 2) {
+                console.log(data);
                 // Ruma hack, tehdaan vain kolmen paivan mittainen koska fmi ei anna enempaa
-                tempWeekMax.pop();tempWeekMax.pop();tempWeekMax.pop();tempWeekMax.pop();
+                tempWeekMax.pop();tempWeekMax.pop();tempWeekMax.pop();tempWeekMax.pop();tempWeekMax.pop();
                 setMaxTemperaturesEnnuste(tempWeekMax);
 
                 maxObvEnnuste = tempWeekMax;
