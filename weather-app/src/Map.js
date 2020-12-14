@@ -1078,7 +1078,7 @@ function Map() {
                             {drawMap()}
                         </td>
                         <td id="mapInfoCell">
-                            <h2>{selectedLocation}<br />{inputDate} {selectedLocation === yk && ("klo " + ykTime)}</h2>
+                            <h2 className="mapHeader">{selectedLocation}<br />{inputDate} {selectedLocation === yk && ("klo " + ykTime)}</h2>
                             <button onClick={getWeather} disabled={!allowSearch || searchError.length > 0}>Hae sää</button>
                             {ykTimeInput()}
                             <div className="error">{searchError}</div>

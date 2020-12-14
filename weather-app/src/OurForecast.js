@@ -391,7 +391,7 @@ function OurForecast() {
 
                             <div key={index + "div"} className="temp">
                                 <header key={index + "time"} className="time">{item[0]}</header>
-                                <div key={index + "t"} className="t">{item[1]}</div>
+                                <div key={index + "t"} className="t">{item[1]}°C</div>
                             </div>
                         ))}
                 </div>
@@ -403,7 +403,7 @@ function OurForecast() {
 
                         <div key={index + "div"} className="temp">
                             <header key={index + "time"} className="time">{item[0]}</header>
-                            <div key={index + "t"} className="t">{item[1]}</div>
+                            <div key={index + "t"} className="t">{item[1]}°C</div>
                         </div>
                     ))}
 
@@ -419,7 +419,7 @@ function OurForecast() {
 
                         <div key={index + "div"} className="temp">
                             <header key={index + "time"} className="time">{item[0]}</header>
-                            <div key={index + "t"} className="t">{(item[1] + ennusteDelta).round(2)}</div>
+                            <div key={index + "t"} className="t">{(item[1] + ennusteDelta).round(2)}°C</div>
                         </div>
                     ))}
 

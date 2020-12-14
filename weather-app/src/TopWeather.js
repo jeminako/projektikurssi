@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './App.css';
 import Metolib from '@fmidev/metolib';
 import Sources from './Sources';
@@ -14,6 +14,10 @@ function TopWeather() {
     const [maxRain, setMaxRain] = useState(0);
     const [rainPlace, setRainPlace] = useState("");
     const [warning, setWarning] = useState("");
+
+    useEffect(() => {
+        console.log(maxTemp);
+    },[inputDate])
 
     //Haetaan tietylle päivälle kaikkien kaupunkien data
     function getData() {

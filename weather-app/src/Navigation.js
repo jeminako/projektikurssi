@@ -17,6 +17,7 @@ function Navigation() {
 
     return (
         <nav>
+            <p className="kuva">Aftercast</p>
             <ul className='links'>
                 <Link style={homeStyle} to='/'>
                     <li>Koti</li>

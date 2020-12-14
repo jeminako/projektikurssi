@@ -64,12 +64,21 @@ nav {
   background-color: rgb(194, 227, 240);
 }
 
+.kuva {
+  width:120px;
+  margin-left:15px;
+  font-family: "Copperplate", Fantasy;
+  font-size: 30px;
+}
+
 .links {
   display: flex;
   justify-content: space-around;
   align-items: center;
   list-style: none;
   width: 40%;
+  margin:auto;
+  padding-right: 190px;
 }
 
 #dayTop {
