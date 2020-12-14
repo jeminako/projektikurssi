@@ -1044,7 +1044,7 @@ function Map() {
 
     return (
         <div className='App' id="mapDiv">
-            <h1>Map</h1>
+            <h1>Kartta</h1>
             <table>
                 <tbody>
                     <tr>

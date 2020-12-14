@@ -580,7 +580,7 @@ function Home() {
       <button onClick={handleClick}>Hae tiedot</button>
       <h3>{warning}</h3>
       <div className="weatherData">
-        <header>WEATHER</header>
+        <header>SÄÄ</header>
         <div className="weatherBar">
           {maxTemperatures.map((item, index) => (
             <div key={index + "div"} className="temp">
@@ -607,7 +607,7 @@ function Home() {
         </div>
       </div>
       <div className="weatherData">
-        <header>FORECAST</header>
+        <header>ENNUSTE</header>
         <div className="weatherBar">
           {maxForecast.map((item, index) => (
               <div key={index + "div"} className="temp">

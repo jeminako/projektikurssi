@@ -6,7 +6,7 @@ import Dropdown from 'react-dropdown';
 import 'react-dropdown/style.css';
 import Ennusteet from './ennusteet.json';
 import * as d3 from 'd3';
-import LineChart from './LineChart';
+//import LineChart from './LineChart';
 import './index.css';
 
 import Metolib from '@fmidev/metolib';
@@ -383,7 +383,7 @@ function OurForecast() {
             <button onClick={handleClick}>Hae tiedot</button>
 
             <div className="weatherData">
-                <h2>Ennusteet</h2>
+                <h2>Toteutuneet max lämpötilat</h2>
                 <div className="weatherBar">
                     {
                         maxTemperatures.map((item, index) => (
@@ -396,7 +396,7 @@ function OurForecast() {
                 </div>
 
 
-                <h2>Toteutuneet max lämpötilat</h2>
+                <h2>Ennusteet</h2>
                 <div className="weatherBar">
                     {maxEnnusteet.map((item, index) => (
 
@@ -429,7 +429,7 @@ function OurForecast() {
                 </div> */}
 
             </div>
-            <h1>Our Forecast (demo)</h1>
+            <h1>Meidän ennuste (demo)</h1>
             <p>Ennusteet edeltävän viikon keskivirhe mukaan laskien:
             </p>
 

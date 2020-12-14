@@ -19,16 +19,16 @@ function Navigation() {
         <nav>
             <ul className='links'>
                 <Link style={homeStyle} to='/'>
-                    <li>Home</li>
+                    <li>Koti</li>
                 </Link>
                 <Link style={navStyle} to='/map'>
-                    <li>Map</li>
+                    <li>Kartta</li>
                 </Link>
                 <Link style={navStyle} to='/topweather'>
-                    <li>Top</li>
+                    <li>Kohokohdat</li>
                 </Link>
                 <Link style={navStyle} to='/ourforecast'>
-                    <li>Our Forecast</li>
+                    <li>Meidän ennuste</li>
                 </Link>
             </ul>
         </nav>
